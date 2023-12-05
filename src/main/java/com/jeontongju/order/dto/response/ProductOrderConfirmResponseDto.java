@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Getter
 public class ProductOrderConfirmResponseDto {
-    private long point;
+    private Long point;
 }

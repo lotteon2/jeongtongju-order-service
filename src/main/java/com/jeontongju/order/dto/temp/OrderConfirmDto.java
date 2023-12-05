@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class OrderConfirmDto {
-    private long productAmount;
+    private Long productAmount;
 }

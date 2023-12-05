@@ -49,7 +49,7 @@ public class Orders extends BaseEntity {
     private Long totalPrice;
 
     @Column(columnDefinition = "boolean default false")
-    private boolean isAuction;
+    private Boolean isAuction;
 
     @OneToMany(mappedBy = "orders")
     private List<ProductOrder> productOrders;

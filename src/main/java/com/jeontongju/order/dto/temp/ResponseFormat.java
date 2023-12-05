@@ -16,7 +16,7 @@ import lombok.Getter;
 @Builder
 @AllArgsConstructor
 public class ResponseFormat<T> {
-    private int code;
+    private Integer code;
     private String message;
     private String detail;
 

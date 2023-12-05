@@ -45,7 +45,6 @@ public class Delivery extends BaseEntity {
     @NotNull
     private String basicAddress;
 
-    @NotNull
     private String addressDetail;
 
     @NotNull
