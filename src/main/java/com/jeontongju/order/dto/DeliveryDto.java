@@ -8,6 +8,6 @@ import javax.validation.constraints.NotNull;
 @NoArgsConstructor
 @Getter
 public class DeliveryDto {
-    @NotNull(message = "운송장 번호는 널일 수 없습니다")
+    @NotNull(message = "운송장 번호는 필수 입력 값 입니다.")
     private String deliveryCode;
 }
