@@ -1,5 +1,6 @@
 package com.jeontongju.payment.dto.temp;
 
+import com.jeontongju.order.domain.Orders;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,7 +21,7 @@ public class ProductInfoDto {
     private String productName;
     private Long productPrice;
     private Long productCount;
-    private String sellerId;
+    private Long sellerId;
     private String sellerName;
     private String productImg;
 }

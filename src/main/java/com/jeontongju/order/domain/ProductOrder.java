@@ -64,7 +64,7 @@ public class ProductOrder extends BaseEntity {
     private ProductOrderStatusEnum productOrderStatus;
 
     @NotNull
-    private String sellerId;
+    private Long sellerId;
 
     @NotNull
     private String sellerName;

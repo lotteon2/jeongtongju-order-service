@@ -3,6 +3,7 @@ package com.jeontongju.order.service;
 import com.jeontongju.order.domain.Delivery;
 import com.jeontongju.order.domain.Orders;
 import com.jeontongju.order.domain.ProductOrder;
+import com.jeontongju.order.dto.temp.AuctionOrderDto;
 import com.jeontongju.order.dto.temp.OrderConfirmDto;
 import com.jeontongju.order.enums.DeliveryStatusEnum;
 import com.jeontongju.order.exception.DeliveryIdNotFoundException;
@@ -43,11 +44,7 @@ public class OrderService {
         OrderCreationDto orderCreationDto = orderInfoDto.getOrderCreationDto();
 
         // 주문 테이블 생성
-        Orders orders = Orders.builder()
-                .consumerId(orderCreationDto.getConsumerId())
-                .orderDate(orderCreationDto.getOrderDate())
-                .totalPrice(orderCreationDto.getTotalPrice())
-                .build();
+        Orders orders = Orders.builder().consumerId(orderCreationDto.getConsumerId()).orderDate(orderCreationDto.getOrderDate()).totalPrice(orderCreationDto.getTotalPrice()).build();
         ordersRepository.save(orders);
 
         List<ProductOrder> productOrderList = new ArrayList<>();
@@ -60,30 +57,16 @@ public class OrderService {
             long minusCoupon = Math.round(couponAmount * percent);
 
             // 주문 상세 테이블 생성
-            ProductOrder productOrder = ProductOrder.builder()
-                    .orders(orders)
-                    .productId(productInfoDto.getProductId())
-                    .productName(productInfoDto.getProductName())
-                    .productCount(productInfoDto.getProductCount())
-                    .productPrice(productInfoDto.getProductPrice())
-                    .productRealAmount(productPrice - minusPoint - minusCoupon)
-                    .productRealPointAmount(minusPoint)
-                    .productRealCouponAmount(minusCoupon)
-                    .sellerId(productInfoDto.getSellerId())
-                    .sellerName(productInfoDto.getSellerName())
-                    .productImg(productInfoDto.getProductImg())
-                    .build();
+            ProductOrder productOrder = ProductOrder.builder().orders(orders).productId(productInfoDto.getProductId()).productName(productInfoDto.getProductName())
+                    .productCount(productInfoDto.getProductCount()).productPrice(productInfoDto.getProductPrice()).productRealAmount(productPrice - minusPoint - minusCoupon)
+                    .productRealPointAmount(minusPoint).productRealCouponAmount(minusCoupon).sellerId(productInfoDto.getSellerId())
+                    .sellerName(productInfoDto.getSellerName()).productImg(productInfoDto.getProductImg()).build();
             productOrderList.add(productOrder);
 
             // 배달 테이블 생성
-            Delivery delivery = Delivery.builder()
-                    .productOrder(productOrder)
-                    .recipientName(orderCreationDto.getRecipientName())
-                    .recipientPhoneNumber(orderCreationDto.getRecipientPhoneNumber())
-                    .basicAddress(orderCreationDto.getBasicAddress())
-                    .addressDetail(orderCreationDto.getAddressDetail())
-                    .zonecode(orderCreationDto.getZoneCode())
-                    .build();
+            Delivery delivery = Delivery.builder().productOrder(productOrder).recipientName(orderCreationDto.getRecipientName())
+                    .recipientPhoneNumber(orderCreationDto.getRecipientPhoneNumber()).basicAddress(orderCreationDto.getBasicAddress())
+                    .addressDetail(orderCreationDto.getAddressDetail()).zonecode(orderCreationDto.getZoneCode()).build();
             deliveryList.add(delivery);
         }
 
@@ -117,8 +100,31 @@ public class OrderService {
         return orderConfirmPoint.getData();
     }
 
+    @Transactional
+    public void createAuctionOrder(AuctionOrderDto auctionOrderDto){
+        Orders orders = Orders.builder().consumerId(auctionOrderDto.getConsumerId()).orderDate(auctionOrderDto.getOrderDate()).
+                totalPrice(auctionOrderDto.getTotalPrice()) .isAuction(true).build();
+
+        ProductOrder productOrder = ProductOrder.builder().orders(orders).productId(auctionOrderDto.getProductId()).productName(auctionOrderDto.getProductName())
+                .productCount(auctionOrderDto.getProductCount()).productPrice(auctionOrderDto.getProductPrice()).productRealAmount(auctionOrderDto.getProductPrice())
+                .sellerId(auctionOrderDto.getSellerId()).sellerName(auctionOrderDto.getSellerName()).productImg(auctionOrderDto.getProductImg()).build();
+
+        Delivery delivery = Delivery.builder().productOrder(productOrder).recipientName(auctionOrderDto.getRecipientName())
+                .recipientPhoneNumber(auctionOrderDto.getRecipientPhoneNumber()).basicAddress(auctionOrderDto.getBasicAddress())
+                .addressDetail(auctionOrderDto.getAddressDetail()).zonecode(auctionOrderDto.getZonecode()).build();
+
+        ordersRepository.save(orders);
+        productOrderRepository.save(productOrder);
+        deliveryRepository.save(delivery);
+    }
+
     public DeliveryStatusEnum getDeliveryStatus(long productOrderId){
-        ProductOrder productOrder = productOrderRepository.findById(productOrderId).orElseThrow(() -> new ProductOrderIdNotFoundException("해당 상품코드가 존재하지 않습니다."));
+        ProductOrder productOrder = productOrderRepository.findById(productOrderId).orElseThrow(() -> new RuntimeException(""));
+        Orders orders = ordersRepository.findById(productOrder.getOrders().getOrdersId()).orElseThrow(()->new RuntimeException(""));
+        if(orders.getIsAuction()){
+            throw new RuntimeException("");
+        }
+
         return productOrder.getDelivery().getDeliveryStatus();
     }
 }
