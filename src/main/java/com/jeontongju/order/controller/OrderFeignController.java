@@ -1,6 +1,6 @@
 package com.jeontongju.order.controller;
 
-import com.jeontongju.order.enums.DeliveryStatusEnum;
+import com.jeontongju.order.enums.ProductOrderStatusEnum;
 import com.jeontongju.order.service.OrderService;
 import com.jeontongju.payment.enums.temp.FeignFormat;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class OrderFeignController {
     private final OrderService orderService;
     @GetMapping("/product-orders/{productOrderId}/status")
-    public FeignFormat<DeliveryStatusEnum> isOrderProductConfirmed(@PathVariable long productOrderId){
-        return FeignFormat.<DeliveryStatusEnum>builder()
+    public FeignFormat<ProductOrderStatusEnum> isOrderProductConfirmed(@PathVariable long productOrderId){
+        return FeignFormat.<ProductOrderStatusEnum>builder()
                 .code(HttpStatus.SC_OK)
                 .data(orderService.getDeliveryStatus(productOrderId))
         .build();

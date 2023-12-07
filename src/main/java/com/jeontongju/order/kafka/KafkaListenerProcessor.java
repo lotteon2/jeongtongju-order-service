@@ -47,5 +47,4 @@ public class KafkaListenerProcessor {
             // TODO 해당 카프카를 처리하다가 예외 발생시 어떻게 해야하는가?
         }
     }
-
 }

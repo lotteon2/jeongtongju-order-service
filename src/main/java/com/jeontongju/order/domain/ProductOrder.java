@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.DynamicInsert;
+import org.hibernate.annotations.DynamicUpdate;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -25,6 +26,7 @@ import javax.validation.constraints.NotNull;
 @Getter
 @Entity
 @DynamicInsert
+@DynamicUpdate
 @Builder
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -79,7 +81,10 @@ public class ProductOrder extends BaseEntity {
     /**
      * 주문확정 상태로 변경
      */
-    public void changeOrderedStatusToConfirmStatus(){
+    public void changeOrderStatusToConfirmStatus(){
         this.productOrderStatus = ProductOrderStatusEnum.CONFIRMED;
+    }
+    public void changeOrderStatusToCancelStatus(){
+        this.productOrderStatus = ProductOrderStatusEnum.CANCEL;
     }
 }
