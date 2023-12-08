@@ -72,7 +72,7 @@ public class OrderController {
         orderService.cancelProductOrder(productOrderCancelRequestDto.getProductOrderId());
 
         return ResponseEntity.ok().body(ResponseFormat.<Void>builder()
-                .code(org.springframework.http.HttpStatus.OK.value())
+                .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
                 .detail("주문 취소 완료")
         .build());
