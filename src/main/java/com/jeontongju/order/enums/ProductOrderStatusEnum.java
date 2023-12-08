@@ -8,5 +8,7 @@ import lombok.Getter;
 public enum ProductOrderStatusEnum {
     ORDER,
     CANCEL,
-    CONFIRMED
+    CONFIRMED,
+    SHIPPING,
+    COMPLETED
 }

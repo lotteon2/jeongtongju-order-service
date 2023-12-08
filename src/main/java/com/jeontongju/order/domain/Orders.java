@@ -8,13 +8,12 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.DynamicInsert;
-import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.DynamicUpdate;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.validation.constraints.NotNull;
@@ -24,13 +23,12 @@ import java.util.List;
 @Getter
 @Entity
 @DynamicInsert
+@DynamicUpdate
 @Builder
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Orders extends BaseEntity {
     @Id
-    @GeneratedValue(generator = "uuid-hibernate-generator")
-    @GenericGenerator(name = "uuid-hibernate-generator", strategy = "org.hibernate.id.UUIDGenerator")
     @Column(columnDefinition = "CHAR(36)")
     private String ordersId;
 
@@ -53,4 +51,13 @@ public class Orders extends BaseEntity {
 
     @OneToMany(mappedBy = "orders")
     private List<ProductOrder> productOrders;
+
+    public boolean isCancelledOrAuction(){
+        // 주문상태가 취소거나 경매상품이라면 취소할 수 있는 주문이다
+        return getOrderStatus() == OrderStatusEnum.CANCEL || getIsAuction();
+    }
+
+    public void changeProductOrderStatusToCancelStatus(){
+        this.orderStatus = OrderStatusEnum.CANCEL;
+    }
 }
