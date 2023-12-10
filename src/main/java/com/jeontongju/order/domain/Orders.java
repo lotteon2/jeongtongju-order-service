@@ -2,6 +2,7 @@ package com.jeontongju.order.domain;
 
 import com.jeontongju.order.domain.common.BaseEntity;
 import com.jeontongju.order.enums.OrderStatusEnum;
+import com.jeontongju.payment.enums.temp.PaymentMethodEnum;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,6 +15,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.validation.constraints.NotNull;
@@ -49,7 +51,11 @@ public class Orders extends BaseEntity {
     @Column(columnDefinition = "boolean default false")
     private Boolean isAuction;
 
-    @OneToMany(mappedBy = "orders")
+    @Enumerated(EnumType.STRING)
+    @NotNull
+    private PaymentMethodEnum paymentMethod;
+
+    @OneToMany(mappedBy = "orders", fetch = FetchType.LAZY)
     private List<ProductOrder> productOrders;
 
     public boolean isCancelledOrAuction(){

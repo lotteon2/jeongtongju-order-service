@@ -12,5 +12,7 @@ import lombok.NoArgsConstructor;
 public class PaymentInfoDto {
     private Long minusPointAmount;
     private Long minusCouponAmount;
+    private Long totalPrice;
     private String couponCode;
+    private Long realPrice;
 }

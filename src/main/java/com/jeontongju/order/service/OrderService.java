@@ -3,6 +3,14 @@ package com.jeontongju.order.service;
 import com.jeontongju.order.domain.Delivery;
 import com.jeontongju.order.domain.Orders;
 import com.jeontongju.order.domain.ProductOrder;
+import com.jeontongju.order.dto.response.common.OrderResponseCommonDto;
+import com.jeontongju.order.dto.response.common.PageInfoDto;
+import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDto;
+import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDtoForAdmin;
+import com.jeontongju.order.dto.response.consumer.DeliveryResponseDto;
+import com.jeontongju.order.dto.response.consumer.OrderListDto;
+import com.jeontongju.order.dto.response.seller.SellerOrderListDto;
+import com.jeontongju.order.dto.response.seller.SellerOrderListResponseDto;
 import com.jeontongju.order.dto.temp.AuctionOrderDto;
 import com.jeontongju.order.dto.temp.OrderCancelDto;
 import com.jeontongju.order.dto.temp.OrderConfirmDto;
@@ -23,6 +31,9 @@ import com.jeontongju.order.kafka.KafkaProcessor;
 import com.jeontongju.order.repository.DeliveryRepository;
 import com.jeontongju.order.repository.OrdersRepository;
 import com.jeontongju.order.repository.ProductOrderRepository;
+import com.jeontongju.order.repository.criteria.OrderSpecifications;
+import com.jeontongju.order.repository.response.OrderResponseDto;
+import com.jeontongju.order.repository.response.ProductResponseDto;
 import com.jeontongju.order.util.KafkaTopicNameInfo;
 import com.jeontongju.payment.dto.temp.OrderCreationDto;
 import com.jeontongju.payment.dto.temp.OrderInfoDto;
@@ -30,8 +41,11 @@ import com.jeontongju.payment.dto.temp.ProductInfoDto;
 import com.jeontongju.payment.enums.temp.FeignFormat;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -56,7 +70,7 @@ public class OrderService {
 
         // 주문 테이블 생성
         Orders orders = Orders.builder().ordersId(orderInfoDto.getOrderCreationDto().getOrderId()).consumerId(orderCreationDto.getConsumerId())
-                .orderDate(orderCreationDto.getOrderDate()).totalPrice(orderCreationDto.getTotalPrice()).build();
+                .orderDate(orderCreationDto.getOrderDate()).totalPrice(orderCreationDto.getTotalPrice()).paymentMethod(orderInfoDto.getOrderCreationDto().getPaymentMethod()).build();
         ordersRepository.save(orders);
 
         List<ProductOrder> productOrderList = new ArrayList<>();
@@ -71,8 +85,8 @@ public class OrderService {
             // 주문 상세 테이블 생성
             ProductOrder productOrder = ProductOrder.builder().orders(orders).productId(productInfoDto.getProductId()).productName(productInfoDto.getProductName())
                     .productCount(productInfoDto.getProductCount()).productPrice(productInfoDto.getProductPrice()).productRealAmount(productPrice - minusPoint - minusCoupon)
-                    .productRealPointAmount(minusPoint).productRealCouponAmount(minusCoupon).sellerId(productInfoDto.getSellerId())
-                    .sellerName(productInfoDto.getSellerName()).productImg(productInfoDto.getProductImg()).build();
+                    .productRealPointAmount(minusPoint).productRealCouponAmount(minusCoupon).sellerId(productInfoDto.getSellerId()).orderDate(orderCreationDto.getOrderDate())
+                    .sellerName(productInfoDto.getSellerName()).productThumbnailImageUrl(productInfoDto.getProductImg()).consumerId(orderCreationDto.getConsumerId()).build();
             productOrderList.add(productOrder);
 
             // 배달 테이블 생성
@@ -123,12 +137,13 @@ public class OrderService {
     @Transactional
     public void createAuctionOrder(AuctionOrderDto auctionOrderDto){
         Orders orders = Orders.builder().ordersId(UUID.randomUUID().toString()).consumerId(auctionOrderDto.getConsumerId()).orderDate(auctionOrderDto.getOrderDate()).
-                totalPrice(auctionOrderDto.getTotalPrice()) .isAuction(true).build();
+                totalPrice(auctionOrderDto.getTotalPrice()).isAuction(true).paymentMethod(auctionOrderDto.getPaymentMethod()).build();
         ordersRepository.save(orders);
 
         ProductOrder productOrder = ProductOrder.builder().orders(orders).productId(auctionOrderDto.getProductId()).productName(auctionOrderDto.getProductName())
                 .productCount(auctionOrderDto.getProductCount()).productPrice(auctionOrderDto.getProductPrice()).productRealAmount(auctionOrderDto.getProductPrice())
-                .sellerId(auctionOrderDto.getSellerId()).sellerName(auctionOrderDto.getSellerName()).productImg(auctionOrderDto.getProductImg()).build();
+                .sellerId(auctionOrderDto.getSellerId()).sellerName(auctionOrderDto.getSellerName()).productThumbnailImageUrl(auctionOrderDto.getProductImg()).consumerId(auctionOrderDto.getConsumerId())
+                .orderDate(auctionOrderDto.getOrderDate()).build();
         productOrderRepository.save(productOrder);
 
         Delivery delivery = Delivery.builder().productOrder(productOrder).recipientName(auctionOrderDto.getRecipientName())
@@ -172,14 +187,86 @@ public class OrderService {
         String couponCode = null;
 
         if(orders.getProductOrders().stream().allMatch(product -> product.getProductOrderStatus() == ProductOrderStatusEnum.CANCEL)){
-            PaymentInfoDto paymentInfo = getPaymentInfo(orders);
-            couponCode = paymentInfo.getCouponCode();
+            couponCode = getPaymentInfo(orders).getCouponCode();
+            orders.changeProductOrderStatusToCancelStatus();
         }
 
         OrderCancelDto orderCancelDto = OrderCancelDto.builder().consumerId(orders.getConsumerId()).ordersId(orders.getOrdersId())
                 .couponCode(couponCode).point(productOrder.getProductRealPointAmount()).cancelAmount(productOrder.getProductRealAmount()).build();
 
         orderCancelDtoKafkaTemplate.send(getOrderCancelTopicName(productOrder.getProductRealPointAmount(), couponCode), orderCancelDto);
+    }
+
+    public ConsumerOrderListResponseDto getConsumerOrderList(Long consumerId, Boolean isAuction, Pageable pageable){
+        Page<Orders> ordersWithPage = ordersRepository.findAll(OrderSpecifications.buildConsumerOrderSpecification(consumerId, isAuction), pageable);
+
+        List<OrderListDto> orderListDtos = new ArrayList<>();
+        for(Orders orders : ordersWithPage.getContent()){
+            OrderResponseDto orderResponseDto = OrderResponseDto.builder().ordersId(orders.getOrdersId()).orderDate(String.valueOf(orders.getOrderDate()))
+                    .orderStatus(orders.getOrderStatus()).isAuction(orders.getIsAuction()).build();
+
+            List<ProductResponseDto> productResponseDtoList = new ArrayList<>();
+            DeliveryResponseDto deliveryResponseDto = null;
+
+            for(ProductOrder productOrder : orders.getProductOrders()){
+                Delivery delivery = productOrder.getDelivery();
+                productResponseDtoList.add(ProductResponseDto.productOrderToProductResponseDto(productOrder, getProductOrderStatusEnum(productOrder, delivery)));
+                if(deliveryResponseDto == null){ deliveryResponseDto = DeliveryResponseDto.DeliveryToDeliveryResponseDto(delivery); }
+            }
+
+            orderListDtos.add(OrderListDto.builder().order(orderResponseDto).product(productResponseDtoList).delivery(deliveryResponseDto).payment(getPaymentInfo(orders)).build());
+        }
+
+        ConsumerOrderListResponseDto consumerOrderListResponseDto = ConsumerOrderListResponseDto.builder().orderLists(orderListDtos).build();
+        setPageableInfo(consumerOrderListResponseDto, ordersWithPage);
+        return consumerOrderListResponseDto;
+    }
+
+    public ProductOrderStatusEnum getDeliveryStatus(Long productOrderId){
+        ProductOrder productOrder = productOrderRepository.findById(productOrderId).orElseThrow(() -> new RuntimeException(""));
+        Orders orders = ordersRepository.findById(productOrder.getOrders().getOrdersId()).orElseThrow(()->new RuntimeException(""));
+        if(orders.getIsAuction()){
+            throw new RuntimeException("");
+        }
+
+        return productOrder.getDelivery().getDeliveryStatus();
+    }
+
+    public SellerOrderListResponseDto getSellerOrderList(Long sellerId, String orderDate, String productId, Boolean isDeliveryCodeNull, Pageable pageable){
+        Page<ProductOrder> productOrdersWithPage = productOrderRepository.findAll(OrderSpecifications.buildSellerProductOrdersSpecification(sellerId, orderDate, productId, isDeliveryCodeNull), pageable);
+        List<ProductOrder> productOrderList = productOrdersWithPage.getContent();
+
+        List<SellerOrderListDto> sellerOrderListDtoList = new ArrayList<>();
+        for(ProductOrder productOrder : productOrderList){
+            Orders orders = productOrder.getOrders();
+            Delivery delivery = productOrder.getDelivery();
+
+            SellerOrderListDto sellerOrderDto = SellerOrderListDto.builder().deliveryId(delivery.getDeliveryId())
+                    .deliveryCode(delivery.getDeliveryCode()).build();
+            setOrderResponseInfo(sellerOrderDto, orders, productOrder, delivery);
+            sellerOrderListDtoList.add(sellerOrderDto);
+        }
+
+        SellerOrderListResponseDto sellerOrderListResponseDto = SellerOrderListResponseDto.builder().content(sellerOrderListDtoList).build();
+        setPageableInfo(sellerOrderListResponseDto, productOrdersWithPage);
+
+        return sellerOrderListResponseDto;
+    }
+
+    public ConsumerOrderListResponseDtoForAdmin getConsumerOrderList(Long consumerId, Pageable pageable){
+        Page<ProductOrder> productOrdersWithPage = productOrderRepository.findByConsumerId(consumerId, pageable);
+
+        List<OrderResponseCommonDto> orderResponseCommonDtoList = new ArrayList<>();
+        for(ProductOrder productOrder: productOrdersWithPage.getContent()){
+            OrderResponseCommonDto orderResponseCommonDto = new OrderResponseCommonDto();
+            setOrderResponseInfo(orderResponseCommonDto, productOrder.getOrders(), productOrder, productOrder.getDelivery());
+            orderResponseCommonDtoList.add(orderResponseCommonDto);
+        }
+
+        ConsumerOrderListResponseDtoForAdmin consumerOrderListResponseDtoForAdmin = ConsumerOrderListResponseDtoForAdmin.builder().content(orderResponseCommonDtoList).build();
+        setPageableInfo(consumerOrderListResponseDtoForAdmin, productOrdersWithPage);
+
+        return consumerOrderListResponseDtoForAdmin;
     }
 
     private PaymentInfoDto getPaymentInfo(Orders orders) {
@@ -206,13 +293,34 @@ public class OrderService {
         return deliveryRepository.findById(deliveryId).orElseThrow(() -> new DeliveryIdNotFoundException("잘못된 요청입니다."));
     }
 
-    public ProductOrderStatusEnum getDeliveryStatus(Long productOrderId){
-        ProductOrder productOrder = productOrderRepository.findById(productOrderId).orElseThrow(() -> new RuntimeException(""));
-        Orders orders = ordersRepository.findById(productOrder.getOrders().getOrdersId()).orElseThrow(()->new RuntimeException(""));
-        if(orders.getIsAuction()){
-            throw new RuntimeException("");
-        }
+    private ProductOrderStatusEnum getProductOrderStatusEnum(ProductOrder productOrder, Delivery delivery) {
+        ProductOrderStatusEnum productOrderStatus = productOrder.getProductOrderStatus();
+        if(productOrderStatus == ProductOrderStatusEnum.ORDER && delivery.getDeliveryCode() != null){productOrderStatus = delivery.getDeliveryStatus();}
+        return productOrderStatus;
+    }
 
-        return productOrder.getDelivery().getDeliveryStatus();
+    private void setPageableInfo(PageInfoDto pageableInfo, Page<?> page){
+        pageableInfo.setLast(page.isLast());
+        pageableInfo.setTotalElements(page.getTotalElements());
+        pageableInfo.setTotalPages(page.getTotalPages());
+        pageableInfo.setSize(page.getSize());
+        pageableInfo.setNumber(page.getNumber());
+        pageableInfo.setSort(page.getSort());
+        pageableInfo.setFirst(page.isFirst());
+        pageableInfo.setNumberOfElements(page.getNumberOfElements());
+        pageableInfo.setEmpty(page.isEmpty());
+        pageableInfo.setPageable(page.getPageable());
+    }
+
+    private void setOrderResponseInfo(OrderResponseCommonDto orderResponseInfo, Orders orders, ProductOrder productOrder, Delivery delivery){
+        orderResponseInfo.setOrdersId(orders.getOrdersId());
+        orderResponseInfo.setProductId(productOrder.getProductId());
+        orderResponseInfo.setProductName(productOrder.getProductName());
+        orderResponseInfo.setProductCount(productOrder.getProductCount());
+        orderResponseInfo.setProductTotalAmount(productOrder.getProductCount()*productOrder.getProductPrice());
+        orderResponseInfo.setOrderDate(String.valueOf(productOrder.getOrderDate()));
+        orderResponseInfo.setPaymentType(orders.getPaymentMethod());
+        orderResponseInfo.setOrderStatus(getProductOrderStatusEnum(productOrder, delivery));
+        orderResponseInfo.setIsAuction(orders.getIsAuction());
     }
 }

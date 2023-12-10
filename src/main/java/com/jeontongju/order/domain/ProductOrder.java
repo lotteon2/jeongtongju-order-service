@@ -22,6 +22,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 
 @Getter
 @Entity
@@ -73,9 +74,16 @@ public class ProductOrder extends BaseEntity {
 
     @NotNull
     @Column(columnDefinition = "TEXT")
-    private String productImg;
+    private String productThumbnailImageUrl;
 
-    @OneToOne(mappedBy = "productOrder")
+    @NotNull
+    @Column(columnDefinition = "TIMESTAMP")
+    private LocalDateTime orderDate;
+
+    @NotNull
+    private Long consumerId;
+
+    @OneToOne(mappedBy = "productOrder", fetch = FetchType.LAZY)
     private Delivery delivery;
 
     /**
@@ -87,4 +95,5 @@ public class ProductOrder extends BaseEntity {
     public void changeOrderStatusToCancelStatus(){
         this.productOrderStatus = ProductOrderStatusEnum.CANCEL;
     }
+
 }
