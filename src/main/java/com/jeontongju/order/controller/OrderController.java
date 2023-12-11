@@ -45,7 +45,7 @@ public class OrderController {
     }
 
     @GetMapping("/order/consumer/{consumerId}")
-    public ResponseEntity<ResponseFormat<ConsumerOrderListResponseDtoForAdmin>> getConsumerOrderList(
+    public ResponseEntity<ResponseFormat<ConsumerOrderListResponseDtoForAdmin>> getConsumerOrderListForAdmin(
             @PathVariable Long consumerId, @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable){
         // TODO 유저만 사용 가능한 API임
         return ResponseEntity.ok().body(ResponseFormat.<ConsumerOrderListResponseDtoForAdmin>builder()
@@ -70,7 +70,7 @@ public class OrderController {
     }
 
     @GetMapping("/order/seller/{sellerId}")
-    public ResponseEntity<ResponseFormat<SellerOrderListResponseDto>> getSellerOrderList(
+    public ResponseEntity<ResponseFormat<SellerOrderListResponseDto>> getSellerOrderListForAdmin(
             @PathVariable Long sellerId, @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable,
             @RequestParam String orderDate, @RequestParam String productId){
         // TODO 관리자만 사용 가능한 API임
