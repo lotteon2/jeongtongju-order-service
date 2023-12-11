@@ -1,5 +1,6 @@
 package com.jeontongju.order.dto.temp;
 
+import com.jeontongju.payment.enums.temp.PaymentMethodEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,6 +17,7 @@ public class AuctionOrderDto {
     private Long consumerId;
     private LocalDateTime orderDate;
     private Long totalPrice;
+    private PaymentMethodEnum paymentMethod;
 
     // product_order를 만들기 위해 필요한 정보
     private String productId;

@@ -7,5 +7,6 @@ import lombok.Getter;
 @Getter
 public enum PaymentMethodEnum {
     NAVER,
-    KAKAO
+    KAKAO,
+    CREDIT
 }
