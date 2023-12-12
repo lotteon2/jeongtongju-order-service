@@ -11,6 +11,7 @@ import com.jeontongju.order.dto.response.consumer.DeliveryResponseDto;
 import com.jeontongju.order.dto.response.consumer.OrderListDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListResponseDto;
+import com.jeontongju.order.dto.temp.AddressDto;
 import com.jeontongju.order.dto.temp.AuctionOrderDto;
 import com.jeontongju.order.dto.temp.OrderCancelDto;
 import com.jeontongju.order.dto.temp.OrderConfirmDto;
@@ -135,7 +136,7 @@ public class OrderService {
     }
 
     @Transactional
-    public void createAuctionOrder(AuctionOrderDto auctionOrderDto){
+    public void createAuctionOrder(AuctionOrderDto auctionOrderDto, AddressDto addressDto){
         Orders orders = Orders.builder().ordersId(UUID.randomUUID().toString()).consumerId(auctionOrderDto.getConsumerId()).orderDate(auctionOrderDto.getOrderDate()).
                 totalPrice(auctionOrderDto.getTotalPrice()).isAuction(true).paymentMethod(auctionOrderDto.getPaymentMethod()).build();
         ordersRepository.save(orders);
@@ -146,9 +147,9 @@ public class OrderService {
                 .orderDate(auctionOrderDto.getOrderDate()).build();
         productOrderRepository.save(productOrder);
 
-        Delivery delivery = Delivery.builder().productOrder(productOrder).recipientName(auctionOrderDto.getRecipientName())
-                .recipientPhoneNumber(auctionOrderDto.getRecipientPhoneNumber()).basicAddress(auctionOrderDto.getBasicAddress())
-                .addressDetail(auctionOrderDto.getAddressDetail()).zonecode(auctionOrderDto.getZonecode()).build();
+        Delivery delivery = Delivery.builder().productOrder(productOrder).recipientName(addressDto.getRecipientName())
+                .recipientPhoneNumber(addressDto.getRecipientPhoneNumber()).basicAddress(addressDto.getBasicAddress())
+                .addressDetail(addressDto.getAddressDetail()).zonecode(addressDto.getZonecode()).build();
         deliveryRepository.save(delivery);
     }
 
@@ -232,7 +233,7 @@ public class OrderService {
         return productOrder.getDelivery().getDeliveryStatus();
     }
 
-    public SellerOrderListResponseDto getSellerOrderList(Long sellerId, String orderDate, String productId, Boolean isDeliveryCodeNull, Pageable pageable){
+    public SellerOrderListResponseDto getSellerOrderList(Long sellerId, String orderDate, String productId, boolean isDeliveryCodeNull, Pageable pageable){
         Page<ProductOrder> productOrdersWithPage = productOrderRepository.findAll(OrderSpecifications.buildSellerProductOrdersSpecification(sellerId, orderDate, productId, isDeliveryCodeNull), pageable);
         List<ProductOrder> productOrderList = productOrdersWithPage.getContent();
 
