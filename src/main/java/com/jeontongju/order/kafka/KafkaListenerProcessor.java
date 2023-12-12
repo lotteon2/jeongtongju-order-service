@@ -1,6 +1,7 @@
 package com.jeontongju.order.kafka;
 
 import com.jeontongju.order.dto.temp.AuctionOrderDto;
+import com.jeontongju.order.feign.ConsumerFeignServiceClient;
 import com.jeontongju.order.service.OrderService;
 import com.jeontongju.order.util.KafkaTopicNameInfo;
 import com.jeontongju.payment.dto.temp.CartDeleteDto;
@@ -18,6 +19,7 @@ public class KafkaListenerProcessor {
     private final KafkaProcessor<List<CartDeleteDto>> cartDeleteKafkaProcessor;
     private final KafkaProcessor<OrderInfoDto> rollbackKafkaProcessor;
     private final OrderService orderService;
+    private final ConsumerFeignServiceClient consumerFeignServiceClient;
 
     @KafkaListener(topics = KafkaTopicNameInfo.ORDER_CREATION_TOPIC)
     public void createOrder(OrderInfoDto orderInfoDto) {
@@ -42,7 +44,7 @@ public class KafkaListenerProcessor {
     @KafkaListener(topics = KafkaTopicNameInfo.AUCTION_ORDER_TOPIC)
     public void createAuctionOrder(AuctionOrderDto auctionOrderDto) {
         try {
-            orderService.createAuctionOrder(auctionOrderDto);
+            orderService.createAuctionOrder(auctionOrderDto, consumerFeignServiceClient.getConsumerAddress(auctionOrderDto.getConsumerId()).getData());
         }catch(Exception e){
             // TODO 해당 카프카를 처리하다가 예외 발생시 어떻게 해야하는가?
         }

@@ -30,7 +30,7 @@ public class OrderSpecifications {
         };
     }
 
-    public static Specification<ProductOrder> buildSellerProductOrdersSpecification(Long sellerId, String orderDate, String productId, Boolean isDeliveryCodeNull) {
+    public static Specification<ProductOrder> buildSellerProductOrdersSpecification(Long sellerId, String orderDate, String productId, boolean isDeliveryCodeNull) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(criteriaBuilder.equal(root.get("sellerId"), sellerId));
@@ -45,8 +45,8 @@ public class OrderSpecifications {
                 predicates.add(criteriaBuilder.equal(root.get("productId"), productId));
             }
 
-            if (isDeliveryCodeNull != null) {
-                predicates.add(isDeliveryCodeNullCondition(criteriaBuilder, root, isDeliveryCodeNull));
+            if (isDeliveryCodeNull) {
+                predicates.add(isDeliveryCodeNullCondition(criteriaBuilder, root, true));
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));

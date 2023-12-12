@@ -59,7 +59,7 @@ public class OrderController {
     @GetMapping("/order/seller")
     public ResponseEntity<ResponseFormat<SellerOrderListResponseDto>> getSellerOrderList(
             @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable,
-            @RequestHeader Long memberId, @RequestParam String orderDate, @RequestParam String productId, @RequestParam(required = false) Boolean isDeliveryCodeNull){
+            @RequestHeader Long memberId, @RequestParam String orderDate, @RequestParam String productId, @RequestParam boolean isDeliveryCodeNull){
         // TODO 셀러만 사용 가능한 API임
         return ResponseEntity.ok().body(ResponseFormat.<SellerOrderListResponseDto>builder()
                 .code(HttpStatus.OK.value())
@@ -78,7 +78,7 @@ public class OrderController {
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
                 .detail("주문내역 조회 완료")
-                .data(orderService.getSellerOrderList(sellerId, orderDate, productId, null, pageable))
+                .data(orderService.getSellerOrderList(sellerId, orderDate, productId, false, pageable))
         .build());
     }
 
