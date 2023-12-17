@@ -2,6 +2,7 @@ package com.jeontongju.order.exception.advice;
 
 import com.jeontongju.order.exception.DeliveryIdNotFoundException;
 import com.jeontongju.order.exception.DuplicateDeliveryCodeException;
+import com.jeontongju.order.exception.InvalidPermissionException;
 import com.jeontongju.order.exception.ProductOrderIdNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -35,4 +36,13 @@ public class ApiControllerAdvice {
                 .message(e.getMessage())
         .build();
     }
+
+    @ExceptionHandler(InvalidPermissionException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleInvalidPermissionException(InvalidPermissionException e) {
+        return ErrorResponse.builder()
+                .message(e.getMessage())
+        .build();
+    }
+
 }

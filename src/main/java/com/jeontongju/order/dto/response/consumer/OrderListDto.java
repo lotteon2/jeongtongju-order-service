@@ -1,9 +1,8 @@
 package com.jeontongju.order.dto.response.consumer;
 
-import com.jeontongju.order.dto.response.consumer.DeliveryResponseDto;
-import com.jeontongju.order.dto.temp.PaymentInfoDto;
 import com.jeontongju.order.repository.response.OrderResponseDto;
 import com.jeontongju.order.repository.response.ProductResponseDto;
+import io.github.bitbox.bitbox.dto.PaymentInfoDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

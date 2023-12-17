@@ -2,7 +2,7 @@ package com.jeontongju.order.controller;
 
 import com.jeontongju.order.enums.ProductOrderStatusEnum;
 import com.jeontongju.order.service.OrderService;
-import com.jeontongju.payment.enums.temp.FeignFormat;
+import io.github.bitbox.bitbox.dto.FeignFormat;
 import lombok.RequiredArgsConstructor;
 import org.apache.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;

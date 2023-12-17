@@ -7,8 +7,10 @@ import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDto;
 import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDtoForAdmin;
 import com.jeontongju.order.dto.response.consumer.ProductOrderConfirmResponseDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListResponseDto;
-import com.jeontongju.order.dto.temp.ResponseFormat;
+import com.jeontongju.order.exception.InvalidPermissionException;
 import com.jeontongju.order.service.OrderService;
+import io.github.bitbox.bitbox.dto.ResponseFormat;
+import io.github.bitbox.bitbox.enums.MemberRoleEnum;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -25,6 +27,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.validation.Valid;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
@@ -33,9 +37,9 @@ public class OrderController {
 
     @GetMapping("/order/consumer")
     public ResponseEntity<ResponseFormat<ConsumerOrderListResponseDto>> getConsumerOrderList(
-            @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable, @RequestHeader Long memberId,
-            @RequestParam(required = false) Boolean isAuction){
-        // TODO 유저만 사용 가능한 API임
+            @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable,
+            @RequestHeader Long memberId, @RequestHeader MemberRoleEnum memberRole, @RequestParam(required = false) Boolean isAuction){
+        checkMemberRole(memberRole, MemberRoleEnum.ROLE_CONSUMER);
         return ResponseEntity.ok().body(ResponseFormat.<ConsumerOrderListResponseDto>builder()
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
@@ -46,8 +50,9 @@ public class OrderController {
 
     @GetMapping("/order/consumer/{consumerId}")
     public ResponseEntity<ResponseFormat<ConsumerOrderListResponseDtoForAdmin>> getConsumerOrderListForAdmin(
+            @RequestHeader MemberRoleEnum memberRole,
             @PathVariable Long consumerId, @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable){
-        // TODO 유저만 사용 가능한 API임
+        checkMemberRole(memberRole, MemberRoleEnum.ROLE_ADMIN);
         return ResponseEntity.ok().body(ResponseFormat.<ConsumerOrderListResponseDtoForAdmin>builder()
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
@@ -59,8 +64,9 @@ public class OrderController {
     @GetMapping("/order/seller")
     public ResponseEntity<ResponseFormat<SellerOrderListResponseDto>> getSellerOrderList(
             @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable,
+            @RequestHeader MemberRoleEnum memberRole,
             @RequestHeader Long memberId, @RequestParam String orderDate, @RequestParam String productId, @RequestParam boolean isDeliveryCodeNull){
-        // TODO 셀러만 사용 가능한 API임
+        checkMemberRole(memberRole, MemberRoleEnum.ROLE_SELLER);
         return ResponseEntity.ok().body(ResponseFormat.<SellerOrderListResponseDto>builder()
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
@@ -72,8 +78,8 @@ public class OrderController {
     @GetMapping("/order/seller/{sellerId}")
     public ResponseEntity<ResponseFormat<SellerOrderListResponseDto>> getSellerOrderListForAdmin(
             @PathVariable Long sellerId, @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable,
-            @RequestParam String orderDate, @RequestParam String productId){
-        // TODO 관리자만 사용 가능한 API임
+            @RequestHeader MemberRoleEnum memberRole, @RequestParam String orderDate, @RequestParam String productId){
+        checkMemberRole(memberRole, MemberRoleEnum.ROLE_ADMIN);
         return ResponseEntity.ok().body(ResponseFormat.<SellerOrderListResponseDto>builder()
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
@@ -84,8 +90,8 @@ public class OrderController {
 
 
     @PatchMapping("/delivery/{deliveryId}")
-    public ResponseEntity<ResponseFormat<Void>> addDeliveryCode(@PathVariable long deliveryId, @RequestBody DeliveryDto deliveryDto){
-        // TODO 셀러만 사용 가능한 API임
+    public ResponseEntity<ResponseFormat<Void>> addDeliveryCode(@PathVariable long deliveryId, @RequestHeader MemberRoleEnum memberRole, @Valid @RequestBody DeliveryDto deliveryDto){
+        checkMemberRole(memberRole, MemberRoleEnum.ROLE_SELLER);
         orderService.addDeliveryCode(deliveryId,deliveryDto.getDeliveryCode());
         return ResponseEntity.ok().body(ResponseFormat.<Void>builder()
                 .code(HttpStatus.OK.value())
@@ -95,8 +101,8 @@ public class OrderController {
     }
 
     @PatchMapping("/delivery-confirm/{deliveryId}")
-    public ResponseEntity<ResponseFormat<Void>> confirmDelivery(@PathVariable Long deliveryId){
-        // TODO 셀러만 사용 가능한 API임
+    public ResponseEntity<ResponseFormat<Void>> confirmDelivery(@PathVariable Long deliveryId, @RequestHeader MemberRoleEnum memberRole){
+        checkMemberRole(memberRole, MemberRoleEnum.ROLE_SELLER);
         orderService.confirmDelivery(deliveryId);
         return ResponseEntity.ok().body(ResponseFormat.<Void>builder()
                 .code(HttpStatus.OK.value())
@@ -106,8 +112,8 @@ public class OrderController {
     }
 
     @PatchMapping("/product-order-confirm/{productOrderId}")
-    public ResponseEntity<ResponseFormat<ProductOrderConfirmResponseDto>> confirmProductOrder(@PathVariable Long productOrderId){
-        // TODO 유저만 사용 가능한 API임
+    public ResponseEntity<ResponseFormat<ProductOrderConfirmResponseDto>> confirmProductOrder(@PathVariable Long productOrderId, @RequestHeader MemberRoleEnum memberRole){
+        checkMemberRole(memberRole, MemberRoleEnum.ROLE_CONSUMER);
         return ResponseEntity.ok().body(ResponseFormat.<ProductOrderConfirmResponseDto>builder()
                 .code(org.springframework.http.HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
@@ -121,8 +127,8 @@ public class OrderController {
     }
 
     @PostMapping("/order-cancel")
-    public ResponseEntity<ResponseFormat<Void>> cancelProductOrder(@RequestBody OrderCancelRequestDto orderCancelRequestDto){
-        // TODO 유저만 사용 가능한 API임
+    public ResponseEntity<ResponseFormat<Void>> cancelProductOrder(@Valid @RequestBody OrderCancelRequestDto orderCancelRequestDto, @RequestHeader MemberRoleEnum memberRole){
+        checkMemberRole(memberRole, MemberRoleEnum.ROLE_CONSUMER);
         orderService.cancelOrder(orderCancelRequestDto.getOrdersId());
 
         return ResponseEntity.ok().body(ResponseFormat.<Void>builder()
@@ -133,8 +139,8 @@ public class OrderController {
     }
 
     @PostMapping("/product-order-cancel")
-    public ResponseEntity<ResponseFormat<Void>> cancelOrder(@RequestBody ProductOrderCancelRequestDto productOrderCancelRequestDto){
-        // TODO 유저만 사용 가능한 API임
+    public ResponseEntity<ResponseFormat<Void>> cancelOrder(@Valid @RequestBody ProductOrderCancelRequestDto productOrderCancelRequestDto, @RequestHeader MemberRoleEnum memberRole){
+        checkMemberRole(memberRole, MemberRoleEnum.ROLE_CONSUMER);
         orderService.cancelProductOrder(productOrderCancelRequestDto.getProductOrderId());
 
         return ResponseEntity.ok().body(ResponseFormat.<Void>builder()
@@ -142,5 +148,11 @@ public class OrderController {
                 .message(HttpStatus.OK.getReasonPhrase())
                 .detail("주문 취소 완료")
         .build());
+    }
+
+    private void checkMemberRole(MemberRoleEnum currentRole, MemberRoleEnum targetRole) {
+        if(currentRole != targetRole){
+            throw new InvalidPermissionException("권한이 부족 합니다.");
+        }
     }
 }
