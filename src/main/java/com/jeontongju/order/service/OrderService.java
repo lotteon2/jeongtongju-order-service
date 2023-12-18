@@ -224,7 +224,7 @@ public class OrderService {
             orderListDtos.add(OrderListDto.builder().order(orderResponseDto).product(productResponseDtoList).delivery(deliveryResponseDto).payment(getPaymentInfo(orders)).build());
         }
 
-        ConsumerOrderListResponseDto consumerOrderListResponseDto = ConsumerOrderListResponseDto.builder().orderLists(orderListDtos).build();
+        ConsumerOrderListResponseDto consumerOrderListResponseDto = ConsumerOrderListResponseDto.builder().content(orderListDtos).build();
         setPageableInfo(consumerOrderListResponseDto, ordersWithPage);
         return consumerOrderListResponseDto;
     }
