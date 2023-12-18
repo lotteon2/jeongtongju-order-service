@@ -23,11 +23,13 @@ public class ProductResponseDto {
     private LocalDateTime orderDate;
     private ProductOrderStatusEnum productOrderStatus;
     private String productThumbnailImageUrl;
+    private Long sellerId;
+    private String sellerName;
 
     public static ProductResponseDto productOrderToProductResponseDto(ProductOrder productOrder, ProductOrderStatusEnum productOrderStatus){
         return ProductResponseDto.builder().productOrderId(productOrder.getProductOrderId()).productId(productOrder.getProductId())
                 .productName(productOrder.getProductName()).productCount(productOrder.getProductCount()).productPrice(productOrder.getProductPrice())
                 .productTotalAmount(productOrder.getProductCount()*productOrder.getProductPrice()).orderDate(productOrder.getOrderDate()).productOrderStatus(productOrderStatus)
-                .productThumbnailImageUrl(productOrder.getProductThumbnailImageUrl()).build();
+                .productThumbnailImageUrl(productOrder.getProductThumbnailImageUrl()).sellerId(productOrder.getSellerId()).sellerName(productOrder.getSellerName()).build();
     }
 }
