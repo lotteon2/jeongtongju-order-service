@@ -134,7 +134,7 @@ public class OrderController {
         return ResponseEntity.ok().body(ResponseFormat.<Void>builder()
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
-                .detail("상품주문 취소 완료")
+                .detail("주문 취소 완료")
         .build());
     }
 
@@ -146,7 +146,7 @@ public class OrderController {
         return ResponseEntity.ok().body(ResponseFormat.<Void>builder()
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
-                .detail("주문 취소 완료")
+                .detail("상품주문 취소 완료")
         .build());
     }
 

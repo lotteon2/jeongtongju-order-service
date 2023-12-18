@@ -38,7 +38,7 @@ public class ApiControllerAdvice {
     }
 
     @ExceptionHandler(InvalidPermissionException.class)
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
     public ErrorResponse handleInvalidPermissionException(InvalidPermissionException e) {
         return ErrorResponse.builder()
                 .message(e.getMessage())
