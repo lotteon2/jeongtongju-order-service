@@ -1,7 +1,7 @@
 package com.jeontongju.order.dto.response.common;
 
 import com.jeontongju.order.enums.ProductOrderStatusEnum;
-import com.jeontongju.payment.enums.temp.PaymentMethodEnum;
+import io.github.bitbox.bitbox.enums.PaymentMethodEnum;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

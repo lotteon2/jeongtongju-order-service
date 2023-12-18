@@ -11,11 +11,6 @@ import com.jeontongju.order.dto.response.consumer.DeliveryResponseDto;
 import com.jeontongju.order.dto.response.consumer.OrderListDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListResponseDto;
-import com.jeontongju.order.dto.temp.AddressDto;
-import com.jeontongju.order.dto.temp.AuctionOrderDto;
-import com.jeontongju.order.dto.temp.OrderCancelDto;
-import com.jeontongju.order.dto.temp.OrderConfirmDto;
-import com.jeontongju.order.dto.temp.PaymentInfoDto;
 import com.jeontongju.order.enums.ProductOrderStatusEnum;
 import com.jeontongju.order.exception.CancelProductOrderException;
 import com.jeontongju.order.exception.DeliveryIdNotFoundException;
@@ -35,11 +30,17 @@ import com.jeontongju.order.repository.ProductOrderRepository;
 import com.jeontongju.order.repository.criteria.OrderSpecifications;
 import com.jeontongju.order.repository.response.OrderResponseDto;
 import com.jeontongju.order.repository.response.ProductResponseDto;
-import com.jeontongju.order.util.KafkaTopicNameInfo;
-import com.jeontongju.payment.dto.temp.OrderCreationDto;
-import com.jeontongju.payment.dto.temp.OrderInfoDto;
-import com.jeontongju.payment.dto.temp.ProductInfoDto;
-import com.jeontongju.payment.enums.temp.FeignFormat;
+import io.github.bitbox.bitbox.dto.AddressDto;
+import io.github.bitbox.bitbox.dto.AuctionOrderDto;
+import io.github.bitbox.bitbox.dto.FeignFormat;
+import io.github.bitbox.bitbox.dto.OrderCancelDto;
+import io.github.bitbox.bitbox.dto.OrderConfirmDto;
+import io.github.bitbox.bitbox.dto.OrderCreationDto;
+import io.github.bitbox.bitbox.dto.OrderInfoDto;
+import io.github.bitbox.bitbox.dto.PaymentInfoDto;
+import io.github.bitbox.bitbox.dto.ProductInfoDto;
+import io.github.bitbox.bitbox.dto.ProductUpdateDto;
+import io.github.bitbox.bitbox.util.KafkaTopicNameInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -137,8 +138,8 @@ public class OrderService {
 
     @Transactional
     public void createAuctionOrder(AuctionOrderDto auctionOrderDto, AddressDto addressDto){
-        Orders orders = Orders.builder().ordersId(UUID.randomUUID().toString()).consumerId(auctionOrderDto.getConsumerId()).orderDate(auctionOrderDto.getOrderDate()).
-                totalPrice(auctionOrderDto.getTotalPrice()).isAuction(true).paymentMethod(auctionOrderDto.getPaymentMethod()).build();
+        Orders orders = Orders.builder().ordersId(UUID.randomUUID().toString()).consumerId(auctionOrderDto.getConsumerId()).orderDate(auctionOrderDto.getOrderDate())
+                        .totalPrice(auctionOrderDto.getTotalPrice()).isAuction(true).paymentMethod(auctionOrderDto.getPaymentMethod()).build();
         ordersRepository.save(orders);
 
         ProductOrder productOrder = ProductOrder.builder().orders(orders).productId(auctionOrderDto.getProductId()).productName(auctionOrderDto.getProductName())
@@ -159,27 +160,31 @@ public class OrderService {
         if(orders.isCancelledOrAuction()){ throw new OrderStatusException("취소된 주문이거나 경매 주문 입니다."); }
         orders.changeProductOrderStatusToCancelStatus();
 
+        List<ProductUpdateDto> productUpdateDtoList = new ArrayList<>();
         for(ProductOrder productOrder : orders.getProductOrders()){
             if(productOrder.getProductOrderStatus() != ProductOrderStatusEnum.ORDER){
                 throw new InvalidOrderCancellationException("주문 취소는 모든 상품들이 주문완료 상태여야 합니다.");
             }
+            if(productOrder.getDelivery().getDeliveryStatus() != null){
+                throw new InvalidOrderCancellationException("주문 취소를 하려면 모든 상품들은 배송상태가 비어있어야 합니다.");
+            }
             productOrder.changeOrderStatusToCancelStatus();
+            productUpdateDtoList.add(ProductUpdateDto.builder().productId(productOrder.getProductId()).productCount(productOrder.getProductCount()).build());
         }
 
         PaymentInfoDto paymentInfo = getPaymentInfo(orders);
 
         orderCancelDtoKafkaTemplate.send(getOrderCancelTopicName(paymentInfo.getMinusPointAmount(), paymentInfo.getCouponCode()),
-                OrderCancelDto.builder().consumerId(orders.getConsumerId()).ordersId(orders.getOrdersId())
-                        .couponCode(paymentInfo.getCouponCode()).point(paymentInfo.getMinusPointAmount()).cancelAmount(null).build());
+                        OrderCancelDto.builder().consumerId(orders.getConsumerId()).ordersId(orders.getOrdersId())
+                        .couponCode(paymentInfo.getCouponCode()).point(paymentInfo.getMinusPointAmount()).cancelAmount(null).productUpdateDtoList(productUpdateDtoList).build());
     }
 
     @Transactional
     public void cancelProductOrder(Long productOrderId){
         ProductOrder productOrder = productOrderRepository.findById(productOrderId).orElseThrow(() -> new ProductOrderIdNotFoundException("해당 상품이 존재하지 않습니다."));
 
-        if(productOrder.getProductOrderStatus() != ProductOrderStatusEnum.ORDER){
-            throw new CancelProductOrderException("주문완료 상태인 상품만 취소할 수 있습니다.");
-        }
+        if(productOrder.getProductOrderStatus() != ProductOrderStatusEnum.ORDER){ throw new CancelProductOrderException("주문완료 상태인 상품만 취소할 수 있습니다.");}
+        if(productOrder.getDelivery().getDeliveryStatus() != null){throw new CancelProductOrderException("배송중인 상품은 취소가 불가능합니다.");}
         productOrder.changeOrderStatusToCancelStatus();
 
         Orders orders = productOrder.getOrders();
@@ -193,7 +198,8 @@ public class OrderService {
         }
 
         OrderCancelDto orderCancelDto = OrderCancelDto.builder().consumerId(orders.getConsumerId()).ordersId(orders.getOrdersId())
-                .couponCode(couponCode).point(productOrder.getProductRealPointAmount()).cancelAmount(productOrder.getProductRealAmount()).build();
+                .couponCode(couponCode).point(productOrder.getProductRealPointAmount()).cancelAmount(productOrder.getProductRealAmount())
+                .productUpdateDtoList(List.of(new ProductUpdateDto(productOrder.getProductId(), productOrder.getProductCount()))).build();
 
         orderCancelDtoKafkaTemplate.send(getOrderCancelTopicName(productOrder.getProductRealPointAmount(), couponCode), orderCancelDto);
     }
@@ -285,7 +291,7 @@ public class OrderService {
         }else if(couponCode!=null){
             topicName = KafkaTopicNameInfo.CANCEL_ORDER_COUPON;
         }else{
-            topicName = KafkaTopicNameInfo.CANCEL_PAYMENT;
+            topicName = KafkaTopicNameInfo.CANCEL_ORDER_PAYMENT;
         }
         return topicName;
     }

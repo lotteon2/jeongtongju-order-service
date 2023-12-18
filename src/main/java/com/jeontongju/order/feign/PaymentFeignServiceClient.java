@@ -1,8 +1,8 @@
 package com.jeontongju.order.feign;
 
-import com.jeontongju.order.dto.temp.PaymentInfoDto;
-import com.jeontongju.payment.dto.temp.OrderInfoDto;
-import com.jeontongju.payment.enums.temp.FeignFormat;
+import io.github.bitbox.bitbox.dto.FeignFormat;
+import io.github.bitbox.bitbox.dto.OrderInfoDto;
+import io.github.bitbox.bitbox.dto.PaymentInfoDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
