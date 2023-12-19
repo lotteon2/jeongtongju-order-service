@@ -48,6 +48,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -229,14 +231,17 @@ public class OrderService {
         return consumerOrderListResponseDto;
     }
 
-    public ProductOrderStatusEnum getDeliveryStatus(Long productOrderId){
+    public Boolean getDeliveryStatus(Long productOrderId){
         ProductOrder productOrder = productOrderRepository.findById(productOrderId).orElseThrow(() -> new RuntimeException(""));
         Orders orders = ordersRepository.findById(productOrder.getOrders().getOrdersId()).orElseThrow(()->new RuntimeException(""));
-        if(orders.getIsAuction()){
-            throw new RuntimeException("");
-        }
+        if(orders.getIsAuction()){ throw new RuntimeException("");}
 
-        return productOrder.getDelivery().getDeliveryStatus();
+        LocalDateTime orderDate = productOrder.getOrderDate();
+        LocalDateTime now = LocalDateTime.now();
+        long secondsBetween = ChronoUnit.SECONDS.between(orderDate, now);
+        boolean is14DaysPassed = secondsBetween >= (14 * 24 * 60 * 60);
+
+        return productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED && !is14DaysPassed;
     }
 
     public SellerOrderListResponseDto getSellerOrderList(Long sellerId, String orderDate, String productId, boolean isDeliveryCodeNull, Pageable pageable){
