@@ -27,6 +27,7 @@ import io.github.bitbox.bitbox.dto.ProductInfoDto;
 import io.github.bitbox.bitbox.dto.ProductUpdateDto;
 import io.github.bitbox.bitbox.dto.UserCouponUpdateDto;
 import io.github.bitbox.bitbox.dto.UserPointUpdateDto;
+import io.github.bitbox.bitbox.enums.FailureTypeEnum;
 import io.github.bitbox.bitbox.enums.PaymentMethodEnum;
 import io.github.bitbox.bitbox.enums.PaymentTypeEnum;
 import org.junit.jupiter.api.Assertions;
@@ -78,11 +79,11 @@ public class OrderServiceTest {
     public void before(){
         // feign mock
         when(paymentFeignServiceClient.approveKakaopay(any(OrderInfoDto.class)))
-                .thenReturn(FeignFormat.<Void>builder().code(200).message("csh").detail("csh2").failure("csh3").build());
+                .thenReturn(FeignFormat.<Void>builder().code(200).message("csh").detail("csh2").failure(FailureTypeEnum.DISABLED_MEMBER).build());
         when(paymentFeignServiceClient.getPaymentInfo(any(String.class)))
-                .thenReturn(FeignFormat.<PaymentInfoDto>builder().code(200).data(PaymentInfoDto.builder().minusPointAmount(100L).build()).message("csh").detail("csh2").failure("csh3").build());
+                .thenReturn(FeignFormat.<PaymentInfoDto>builder().code(200).data(PaymentInfoDto.builder().minusPointAmount(100L).build()).message("csh").detail("csh2").failure(FailureTypeEnum.DISABLED_MEMBER).build());
         when(consumerFeignServiceClient.getOrderConfirmPoint(any(OrderConfirmDto.class)))
-                .thenReturn(FeignFormat.<Long>builder().code(200).data(100L).message("csh").detail("csh2").failure("csh3").build());
+                .thenReturn(FeignFormat.<Long>builder().code(200).data(100L).message("csh").detail("csh2").failure(FailureTypeEnum.DISABLED_MEMBER).build());
 
         UserPointUpdateDto userPointUpdateDto = UserPointUpdateDto.builder().consumerId(1L).point(100L).build();
         UserCouponUpdateDto userCouponUpdateDto = UserCouponUpdateDto.builder().consumerId(1L).couponCode("coupon").couponAmount(100L).totalAmount(20000L).build();
@@ -214,7 +215,7 @@ public class OrderServiceTest {
     @Test
     public void 배송완료가_아니면_구매확정이_불가능하다(){
         when(consumerFeignServiceClient.getOrderConfirmPoint(OrderConfirmDto.builder().productAmount(1000L).build()))
-                .thenReturn(FeignFormat.<Long>builder().code(200).data(100L).message("csh").detail("csh2").failure("csh3").build());
+                .thenReturn(FeignFormat.<Long>builder().code(200).data(100L).message("csh").detail("csh2").failure(FailureTypeEnum.DISABLED_MEMBER).build());
         ProductOrder productOrder = productOrderRepository.findAll().get(0);
         Assertions.assertThrows(DeliveryStatusException.class, () -> orderService.confirmProductOrder(productOrder.getDelivery().getDeliveryId()));
     }

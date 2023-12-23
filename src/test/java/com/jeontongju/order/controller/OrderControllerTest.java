@@ -39,7 +39,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 .header("memberId",1L)
                                 .header("memberRole", MemberRoleEnum.ROLE_ADMIN))
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -50,7 +50,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 .header("memberId",1L)
                                 .header("memberRole", MemberRoleEnum.ROLE_SELLER))
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -61,7 +61,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 .header("memberId",1L)
                                 .header("memberRole", MemberRoleEnum.ROLE_CONSUMER))
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -72,7 +72,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 .header("memberId",1L)
                                 .header("memberRole", MemberRoleEnum.ROLE_SELLER))
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -97,7 +97,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 .param("productId","1")
                                 .param("isDeliveryCodeNull","true"))
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -125,7 +125,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 .param("productId","1")
                                 .param("isDeliveryCodeNull","true"))
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -138,7 +138,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 .param("orderDate","1")
                                 .param("productId","1"))
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -151,7 +151,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 .param("orderDate","1")
                                 .param("productId","1"))
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -178,7 +178,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 .content(objectMapper.writeValueAsString(DeliveryDto.builder().deliveryCode("test").build()))
                 )
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -221,7 +221,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 .content(objectMapper.writeValueAsString(DeliveryDto.builder().deliveryCode("test").build()))
                 )
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -234,7 +234,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 
                 )
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -260,7 +260,7 @@ public class OrderControllerTest extends ControllerTestUtil {
 
                 )
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -286,7 +286,7 @@ public class OrderControllerTest extends ControllerTestUtil {
 
                 )
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -299,7 +299,7 @@ public class OrderControllerTest extends ControllerTestUtil {
 
                 )
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -341,7 +341,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 .content(objectMapper.writeValueAsString(OrderCancelRequestDto.builder().ordersId("test").build()))
                 )
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -356,7 +356,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 .content(objectMapper.writeValueAsString(OrderCancelRequestDto.builder().ordersId("test").build()))
                 )
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -399,7 +399,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 .content(objectMapper.writeValueAsString(ProductOrderCancelRequestDto.builder().productOrderId(1L).build()))
                 )
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -414,7 +414,7 @@ public class OrderControllerTest extends ControllerTestUtil {
                                 .content(objectMapper.writeValueAsString(ProductOrderCancelRequestDto.builder().productOrderId(1L).build()))
                 )
                 .andDo(print())
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
 }
