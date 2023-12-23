@@ -4,8 +4,10 @@ import com.jeontongju.order.feign.ConsumerFeignServiceClient;
 import com.jeontongju.order.service.OrderService;
 import io.github.bitbox.bitbox.dto.AuctionOrderDto;
 import io.github.bitbox.bitbox.dto.CartDeleteDto;
+import io.github.bitbox.bitbox.dto.CartDeleteListDto;
 import io.github.bitbox.bitbox.dto.OrderInfoDto;
 import io.github.bitbox.bitbox.dto.ProductUpdateDto;
+import io.github.bitbox.bitbox.dto.ProductUpdateListDto;
 import io.github.bitbox.bitbox.util.KafkaTopicNameInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -17,8 +19,8 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class KafkaListenerProcessor {
-    private final KafkaProcessor<List<CartDeleteDto>> cartDeleteKafkaProcessor;
-    private final KafkaProcessor<List<ProductUpdateDto>> productUpdateKafkaProcessor;
+    private final KafkaProcessor<CartDeleteListDto> cartDeleteKafkaProcessor;
+    private final KafkaProcessor<ProductUpdateListDto> productUpdateKafkaProcessor;
     private final KafkaProcessor<OrderInfoDto> rollbackKafkaProcessor;
     private final OrderService orderService;
     private final ConsumerFeignServiceClient consumerFeignServiceClient;
@@ -33,14 +35,18 @@ public class KafkaListenerProcessor {
         }
 
         // 장바구니 지우는 카프카를 보낸다
-        cartDeleteKafkaProcessor.send(KafkaTopicNameInfo.DELETE_CART, orderInfoDto.getOrderCreationDto().getProductInfoDtoList()
-                .stream().map(productInfoDto -> CartDeleteDto.builder().consumerId(orderInfoDto.getOrderCreationDto().getConsumerId()).productId(productInfoDto.getProductId())
-                    .productCount(productInfoDto.getProductCount()).build()).collect(Collectors.toList()));
+        cartDeleteKafkaProcessor.send(KafkaTopicNameInfo.DELETE_CART, CartDeleteListDto.builder()
+                .cartDeleteDtoList(orderInfoDto.getOrderCreationDto().getProductInfoDtoList().stream().map(productInfoDto -> CartDeleteDto.builder()
+                        .consumerId(orderInfoDto.getOrderCreationDto().getConsumerId()).productId(productInfoDto.getProductId())
+                        .productCount(productInfoDto.getProductCount()).build()).collect(Collectors.toList()))
+        .build());
 
         // 판매로그를 엘라스틱 서치에 쌓는다
-        productUpdateKafkaProcessor.send(KafkaTopicNameInfo.UPDATE_PRODUCT_SALES_COUNT, orderInfoDto.getProductUpdateDto().stream()
-                .map(productUpdateDto -> ProductUpdateDto.builder().productId(productUpdateDto.getProductId())
-                        .productCount(productUpdateDto.getProductCount()).build()).collect(Collectors.toList()));
+        productUpdateKafkaProcessor.send(KafkaTopicNameInfo.UPDATE_PRODUCT_SALES_COUNT, ProductUpdateListDto.builder()
+                .productUpdateDtoList(orderInfoDto.getProductUpdateDto().stream()
+                        .map(productUpdateDto -> ProductUpdateDto.builder().productId(productUpdateDto.getProductId())
+                        .productCount(productUpdateDto.getProductCount()).build()).collect(Collectors.toList()))
+        .build());
     }
 
     @KafkaListener(topics = KafkaTopicNameInfo.CREATE_AUCTION_ORDER)
