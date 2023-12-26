@@ -212,18 +212,20 @@ public class OrderService {
 
         List<OrderListDto> orderListDtos = new ArrayList<>();
         for(Orders orders : ordersWithPage.getContent()){
-            OrderResponseDto orderResponseDto = OrderResponseDto.builder().ordersId(orders.getOrdersId()).orderDate(String.valueOf(orders.getOrderDate()))
-                    .orderStatus(orders.getOrderStatus()).isAuction(orders.getIsAuction()).build();
-
+            boolean isAbleToCancel = true;
             List<ProductResponseDto> productResponseDtoList = new ArrayList<>();
             DeliveryResponseDto deliveryResponseDto = null;
 
             for(ProductOrder productOrder : orders.getProductOrders()){
                 Delivery delivery = productOrder.getDelivery();
-                productResponseDtoList.add(ProductResponseDto.productOrderToProductResponseDto(productOrder, getProductOrderStatusEnum(productOrder, delivery)));
+                ProductOrderStatusEnum productOrderStatusEnum = getProductOrderStatusEnum(productOrder, delivery);
+                if(productOrderStatusEnum != ProductOrderStatusEnum.ORDER){isAbleToCancel = false;}
+                productResponseDtoList.add(ProductResponseDto.productOrderToProductResponseDto(productOrder, productOrderStatusEnum));
                 if(deliveryResponseDto == null){ deliveryResponseDto = DeliveryResponseDto.DeliveryToDeliveryResponseDto(delivery); }
             }
 
+            OrderResponseDto orderResponseDto = OrderResponseDto.builder().ordersId(orders.getOrdersId()).orderDate(String.valueOf(orders.getOrderDate()))
+                    .isAbleToCancel(isAbleToCancel).orderStatus(orders.getOrderStatus()).isAuction(orders.getIsAuction()).build();
             orderListDtos.add(OrderListDto.builder().order(orderResponseDto).product(productResponseDtoList).delivery(deliveryResponseDto).payment(getPaymentInfo(orders)).build());
         }
 
