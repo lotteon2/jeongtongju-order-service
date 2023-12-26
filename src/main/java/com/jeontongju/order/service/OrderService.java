@@ -131,7 +131,8 @@ public class OrderService {
     @Transactional
     public long confirmProductOrder(Long productOrderId){
         ProductOrder productOrder = productOrderRepository.findById(productOrderId).orElseThrow(() -> new ProductOrderIdNotFoundException("해당 상품코드가 존재하지 않습니다."));
-        if(getDelivery(productOrder.getDelivery().getDeliveryId()).getDeliveryStatus() != ProductOrderStatusEnum.COMPLETED){ throw new DeliveryStatusException("구매 확정은 배송완료 상품에 대해서만 가능합니다."); }
+        if(getDelivery(productOrder.getDelivery().getDeliveryId()).getDeliveryStatus() != ProductOrderStatusEnum.COMPLETED ||
+                productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED ){ throw new DeliveryStatusException("구매 확정은 배송완료 상품에 대해서만 가능합니다."); }
         productOrder.changeOrderStatusToConfirmStatus();
         FeignFormat<Long> orderConfirmPoint = consumerFeignServiceClient.getOrderConfirmPoint(OrderConfirmDto.builder().consumerId(productOrder.getConsumerId()).productAmount(productOrder.getProductRealAmount()).build());
         if(orderConfirmPoint.getCode() != 200){ throw new FeignServerNotAvailableException("유저 서버에서 예외가 발생했습니다."); }
