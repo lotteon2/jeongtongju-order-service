@@ -8,13 +8,17 @@ import io.github.bitbox.bitbox.dto.CartDeleteListDto;
 import io.github.bitbox.bitbox.dto.OrderInfoDto;
 import io.github.bitbox.bitbox.dto.ProductUpdateDto;
 import io.github.bitbox.bitbox.dto.ProductUpdateListDto;
+import io.github.bitbox.bitbox.dto.ServerErrorForNotificationDto;
+import io.github.bitbox.bitbox.enums.NotificationTypeEnum;
+import io.github.bitbox.bitbox.enums.RecipientTypeEnum;
 import io.github.bitbox.bitbox.util.KafkaTopicNameInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.stream.Collectors;
+
+import static java.time.LocalDateTime.now;
 
 @Component
 @RequiredArgsConstructor
@@ -22,6 +26,7 @@ public class KafkaListenerProcessor {
     private final KafkaProcessor<CartDeleteListDto> cartDeleteKafkaProcessor;
     private final KafkaProcessor<ProductUpdateListDto> productUpdateKafkaProcessor;
     private final KafkaProcessor<OrderInfoDto> rollbackKafkaProcessor;
+    private final KafkaProcessor<ServerErrorForNotificationDto> serverErrorForNotificationDtoKafkaProcessor;
     private final OrderService orderService;
     private final ConsumerFeignServiceClient consumerFeignServiceClient;
 
@@ -31,7 +36,14 @@ public class KafkaListenerProcessor {
             orderService.createOrder(orderInfoDto);
         }catch(Exception e){
             rollbackKafkaProcessor.send(KafkaTopicNameInfo.ADD_STOCK, orderInfoDto); // 카프카를 쏜다.
-            // [TODO] 알림을 발송한다.
+            serverErrorForNotificationDtoKafkaProcessor.send(KafkaTopicNameInfo.SEND_ERROR_NOTIFICATION,
+                    ServerErrorForNotificationDto.builder()
+                            .recipientId(orderInfoDto.getOrderCreationDto().getConsumerId())
+                            .recipientType(RecipientTypeEnum.ROLE_CONSUMER)
+                            .notificationType(NotificationTypeEnum.INTERNAL_ORDER_SERVER_ERROR)
+                            .createdAt(now())
+                            .error(orderInfoDto)
+                    .build());
         }
 
         // 장바구니 지우는 카프카를 보낸다
