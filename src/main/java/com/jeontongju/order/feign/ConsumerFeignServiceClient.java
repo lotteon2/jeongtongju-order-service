@@ -14,6 +14,6 @@ public interface ConsumerFeignServiceClient {
     @PostMapping("/orders-confirm")
     FeignFormat<Long> getOrderConfirmPoint(@RequestBody OrderConfirmDto orderConfirmDto);
 
-    @GetMapping("/consumer/{consumerId}/address")
+    @GetMapping("/consumers/{consumerId}/address")
     FeignFormat<AddressDto> getConsumerAddress(@PathVariable Long consumerId);
 }
