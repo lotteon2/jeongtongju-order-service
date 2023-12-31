@@ -3,10 +3,12 @@ package com.jeontongju.order.controller;
 import com.jeontongju.order.dto.DeliveryDto;
 import com.jeontongju.order.dto.OrderCancelRequestDto;
 import com.jeontongju.order.dto.ProductOrderCancelRequestDto;
+import com.jeontongju.order.dto.response.admin.SettlementForAdmin;
 import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDto;
 import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDtoForAdmin;
 import com.jeontongju.order.dto.response.consumer.ProductOrderConfirmResponseDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListResponseDto;
+import com.jeontongju.order.dto.response.seller.SettlementForSeller;
 import com.jeontongju.order.exception.InvalidPermissionException;
 import com.jeontongju.order.service.OrderService;
 import io.github.bitbox.bitbox.dto.ResponseFormat;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -88,6 +91,30 @@ public class OrderController {
         .build());
     }
 
+    @GetMapping("/settlement/seller/{sellerId}")
+    public ResponseEntity<ResponseFormat<List<SettlementForAdmin>>> getSettlementForAdmin(@PathVariable Long sellerId, @RequestParam Long year,
+                                                                                         @RequestHeader MemberRoleEnum memberRole){
+        checkMemberRole(memberRole, MemberRoleEnum.ROLE_ADMIN);
+        return ResponseEntity.ok().body(ResponseFormat.<List<SettlementForAdmin>>builder()
+                .code(HttpStatus.OK.value())
+                .message(HttpStatus.OK.getReasonPhrase())
+                .detail("특정 셀러 정산 내역 조회 완료")
+                .data(orderService.getSettlementForAdmin(sellerId,year))
+        .build());
+    }
+
+    // 내 정산 내역 조회(셀러)
+    @GetMapping("/settlement/seller/year/{year}/month/{month}")
+    public ResponseEntity<ResponseFormat<SettlementForSeller>> getSettlementForSeller(@PathVariable Long year, @PathVariable Long month,
+                                                                                      @RequestHeader Long memberId, @RequestHeader MemberRoleEnum memberRole){
+        checkMemberRole(memberRole, MemberRoleEnum.ROLE_SELLER);
+        return ResponseEntity.ok().body(ResponseFormat.<SettlementForSeller>builder()
+                .code(HttpStatus.OK.value())
+                .message(HttpStatus.OK.getReasonPhrase())
+                .detail("나의 정산 내역 조회 완료")
+                .data(orderService.getSettlementForSeller(memberId,year,month))
+        .build());
+    }
 
     @PatchMapping("/delivery/{deliveryId}")
     public ResponseEntity<ResponseFormat<Void>> addDeliveryCode(@PathVariable long deliveryId, @RequestHeader MemberRoleEnum memberRole, @Valid @RequestBody DeliveryDto deliveryDto){

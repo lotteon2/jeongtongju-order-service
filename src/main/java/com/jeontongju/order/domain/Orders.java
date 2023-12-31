@@ -65,4 +65,8 @@ public class Orders extends BaseEntity {
     public void changeProductOrderStatusToCancelStatus(){
         this.orderStatus = OrderStatusEnum.CANCEL;
     }
+
+    public void changeProductOrderStatusToNormalStatus(){
+        this.orderStatus = OrderStatusEnum.NORMAL;
+    }
 }

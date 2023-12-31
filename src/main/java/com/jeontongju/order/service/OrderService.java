@@ -3,6 +3,7 @@ package com.jeontongju.order.service;
 import com.jeontongju.order.domain.Delivery;
 import com.jeontongju.order.domain.Orders;
 import com.jeontongju.order.domain.ProductOrder;
+import com.jeontongju.order.dto.response.admin.SettlementForAdmin;
 import com.jeontongju.order.dto.response.common.OrderResponseCommonDto;
 import com.jeontongju.order.dto.response.common.PageInfoDto;
 import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDto;
@@ -11,6 +12,7 @@ import com.jeontongju.order.dto.response.consumer.DeliveryResponseDto;
 import com.jeontongju.order.dto.response.consumer.OrderListDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListResponseDto;
+import com.jeontongju.order.dto.response.seller.SettlementForSeller;
 import com.jeontongju.order.enums.ProductOrderStatusEnum;
 import com.jeontongju.order.exception.CancelProductOrderException;
 import com.jeontongju.order.exception.DeliveryIdNotFoundException;
@@ -27,6 +29,7 @@ import com.jeontongju.order.kafka.KafkaProcessor;
 import com.jeontongju.order.repository.DeliveryRepository;
 import com.jeontongju.order.repository.OrdersRepository;
 import com.jeontongju.order.repository.ProductOrderRepository;
+import com.jeontongju.order.repository.SettlementRepository;
 import com.jeontongju.order.repository.criteria.OrderSpecifications;
 import com.jeontongju.order.repository.response.OrderResponseDto;
 import com.jeontongju.order.repository.response.ProductResponseDto;
@@ -62,6 +65,7 @@ public class OrderService {
     private final DeliveryRepository deliveryRepository;
     private final OrdersRepository ordersRepository;
     private final ProductOrderRepository productOrderRepository;
+    private final SettlementRepository settlementRepository;
     private final PaymentFeignServiceClient paymentFeignServiceClient;
     private final ConsumerFeignServiceClient consumerFeignServiceClient;
     private final KafkaProcessor<OrderCancelDto> orderCancelDtoKafkaTemplate;
@@ -164,6 +168,7 @@ public class OrderService {
         orders.changeProductOrderStatusToCancelStatus();
 
         List<ProductUpdateDto> productUpdateDtoList = new ArrayList<>();
+        List<Long> productOrderIds = new ArrayList<>();
         for(ProductOrder productOrder : orders.getProductOrders()){
             if(productOrder.getProductOrderStatus() != ProductOrderStatusEnum.ORDER){
                 throw new InvalidOrderCancellationException("주문 취소는 모든 상품들이 주문완료 상태여야 합니다.");
@@ -171,7 +176,9 @@ public class OrderService {
             if(productOrder.getDelivery().getDeliveryStatus() != null){
                 throw new InvalidOrderCancellationException("주문 취소를 하려면 모든 상품들은 배송상태가 비어있어야 합니다.");
             }
+
             productOrder.changeOrderStatusToCancelStatus();
+            productOrderIds.add(productOrder.getProductOrderId());
             productUpdateDtoList.add(ProductUpdateDto.builder().productId(productOrder.getProductId()).productCount(productOrder.getProductCount()).build());
         }
 
@@ -179,7 +186,8 @@ public class OrderService {
 
         orderCancelDtoKafkaTemplate.send(getOrderCancelTopicName(paymentInfo.getMinusPointAmount(), paymentInfo.getCouponCode()),
                         OrderCancelDto.builder().consumerId(orders.getConsumerId()).ordersId(orders.getOrdersId())
-                        .couponCode(paymentInfo.getCouponCode()).point(paymentInfo.getMinusPointAmount()).cancelAmount(null).productUpdateDtoList(productUpdateDtoList).build());
+                        .couponCode(paymentInfo.getCouponCode()).point(paymentInfo.getMinusPointAmount()).cancelAmount(null)
+                        .cancelOrderId(orderId).cancelProductOrderId(productOrderIds).productUpdateDtoList(productUpdateDtoList).build());
     }
 
     @Transactional
@@ -194,17 +202,30 @@ public class OrderService {
         if(orders.isCancelledOrAuction()){ throw new OrderStatusException("취소된 주문이거나 경매 주문 입니다."); }
 
         String couponCode = null;
-
+        String orderId = null;
         if(orders.getProductOrders().stream().allMatch(product -> product.getProductOrderStatus() == ProductOrderStatusEnum.CANCEL)){
             couponCode = getPaymentInfo(orders).getCouponCode();
             orders.changeProductOrderStatusToCancelStatus();
+            orderId = orders.getOrdersId();
         }
 
         OrderCancelDto orderCancelDto = OrderCancelDto.builder().consumerId(orders.getConsumerId()).ordersId(orders.getOrdersId())
                 .couponCode(couponCode).point(productOrder.getProductRealPointAmount()).cancelAmount(productOrder.getProductRealAmount())
+                .cancelOrderId(orderId).cancelProductOrderId(List.of(productOrderId))
                 .productUpdateDtoList(List.of(new ProductUpdateDto(productOrder.getProductId(), productOrder.getProductCount()))).build();
 
         orderCancelDtoKafkaTemplate.send(getOrderCancelTopicName(productOrder.getProductRealPointAmount(), couponCode), orderCancelDto);
+    }
+
+    @Transactional
+    public void revertOrderStatus(String orderId, List<Long> productOrderId){
+        if(orderId != null){
+            ordersRepository.findById(orderId).orElseThrow(()->new OrderIdNotFoundException("존재하지 않는 주문번호")).changeProductOrderStatusToNormalStatus();
+        }
+
+        for(Long id : productOrderId){
+            productOrderRepository.findById(id).orElseThrow(()->new ProductOrderIdNotFoundException("존재하지 않는 상품 주문번호")).changeOrderStatusToOrderStatus();
+        }
     }
 
     public ConsumerOrderListResponseDto getConsumerOrderList(Long consumerId, Boolean isAuction, Pageable pageable){
@@ -284,6 +305,14 @@ public class OrderService {
         return consumerOrderListResponseDtoForAdmin;
     }
 
+    public List<SettlementForAdmin> getSettlementForAdmin(Long sellerId, Long year){
+        return settlementRepository.findBySellerIdAndSettlementYear(sellerId,year);
+    }
+
+    public SettlementForSeller getSettlementForSeller(Long sellerId, Long year, Long month){
+        return settlementRepository.findBySellerIdAndSettlementYearAndSettlementMonth(sellerId,year, month);
+    }
+
     private PaymentInfoDto getPaymentInfo(Orders orders) {
         FeignFormat<PaymentInfoDto> paymentInfo = paymentFeignServiceClient.getPaymentInfo(orders.getOrdersId());
         if(paymentInfo.getCode() != 200){
@@ -299,7 +328,7 @@ public class OrderService {
         }else if(couponCode!=null){
             topicName = KafkaTopicNameInfo.CANCEL_ORDER_COUPON;
         }else{
-            topicName = KafkaTopicNameInfo.CANCEL_ORDER_PAYMENT;
+            topicName = KafkaTopicNameInfo.CANCEL_ORDER_STOCK;
         }
         return topicName;
     }

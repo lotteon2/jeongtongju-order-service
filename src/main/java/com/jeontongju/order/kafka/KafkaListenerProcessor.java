@@ -5,6 +5,7 @@ import com.jeontongju.order.service.OrderService;
 import io.github.bitbox.bitbox.dto.AuctionOrderDto;
 import io.github.bitbox.bitbox.dto.CartDeleteDto;
 import io.github.bitbox.bitbox.dto.CartDeleteListDto;
+import io.github.bitbox.bitbox.dto.OrderCancelDto;
 import io.github.bitbox.bitbox.dto.OrderInfoDto;
 import io.github.bitbox.bitbox.dto.ProductUpdateDto;
 import io.github.bitbox.bitbox.dto.ProductUpdateListDto;
@@ -71,5 +72,10 @@ public class KafkaListenerProcessor {
             // TODO 해당 카프카를 처리하다가 예외 발생시 어떻게 해야하는가?
             throw e;
         }
+    }
+
+    @KafkaListener(topics = KafkaTopicNameInfo.RECOVER_CANCEL_ORDER)
+    public void createAuctionOrder(OrderCancelDto orderCancelDto) {
+        orderService.revertOrderStatus(orderCancelDto.getCancelOrderId(), orderCancelDto.getCancelProductOrderId());
     }
 }
