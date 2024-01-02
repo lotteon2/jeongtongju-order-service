@@ -87,7 +87,7 @@ public class OrderController {
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
                 .detail("주문내역 조회 완료")
-                .data(orderService.getSellerOrderList(sellerId, null, null, false, pageable))
+                .data(orderService.getSellerOrderList(sellerId, "null", "null", false, pageable))
         .build());
     }
 
