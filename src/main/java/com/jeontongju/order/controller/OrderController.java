@@ -81,13 +81,13 @@ public class OrderController {
     @GetMapping("/order/seller/{sellerId}")
     public ResponseEntity<ResponseFormat<SellerOrderListResponseDto>> getSellerOrderListForAdmin(
             @PathVariable Long sellerId, @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable,
-            @RequestHeader MemberRoleEnum memberRole, @RequestParam String orderDate, @RequestParam String productId){
+            @RequestHeader MemberRoleEnum memberRole,@RequestParam(required = false) String orderDate, @RequestParam(required = false) String productId){
         checkMemberRole(memberRole, MemberRoleEnum.ROLE_ADMIN);
         return ResponseEntity.ok().body(ResponseFormat.<SellerOrderListResponseDto>builder()
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
                 .detail("주문내역 조회 완료")
-                .data(orderService.getSellerOrderList(sellerId, orderDate, productId, false, pageable))
+                .data(orderService.getSellerOrderList(sellerId, null, null, false, pageable))
         .build());
     }
 
