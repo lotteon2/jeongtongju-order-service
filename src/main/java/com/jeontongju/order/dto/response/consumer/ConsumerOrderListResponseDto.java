@@ -13,5 +13,5 @@ import java.util.List;
 @AllArgsConstructor
 @Getter
 public class ConsumerOrderListResponseDto extends PageInfoDto {
-    private List<OrderListDto> orderLists;
+    private List<OrderListDto> content;
 }

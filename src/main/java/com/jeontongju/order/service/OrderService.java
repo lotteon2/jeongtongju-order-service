@@ -3,6 +3,7 @@ package com.jeontongju.order.service;
 import com.jeontongju.order.domain.Delivery;
 import com.jeontongju.order.domain.Orders;
 import com.jeontongju.order.domain.ProductOrder;
+import com.jeontongju.order.dto.response.admin.SettlementForAdmin;
 import com.jeontongju.order.dto.response.common.OrderResponseCommonDto;
 import com.jeontongju.order.dto.response.common.PageInfoDto;
 import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDto;
@@ -11,11 +12,7 @@ import com.jeontongju.order.dto.response.consumer.DeliveryResponseDto;
 import com.jeontongju.order.dto.response.consumer.OrderListDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListResponseDto;
-import com.jeontongju.order.dto.temp.AddressDto;
-import com.jeontongju.order.dto.temp.AuctionOrderDto;
-import com.jeontongju.order.dto.temp.OrderCancelDto;
-import com.jeontongju.order.dto.temp.OrderConfirmDto;
-import com.jeontongju.order.dto.temp.PaymentInfoDto;
+import com.jeontongju.order.dto.response.seller.SettlementForSeller;
 import com.jeontongju.order.enums.ProductOrderStatusEnum;
 import com.jeontongju.order.exception.CancelProductOrderException;
 import com.jeontongju.order.exception.DeliveryIdNotFoundException;
@@ -32,14 +29,21 @@ import com.jeontongju.order.kafka.KafkaProcessor;
 import com.jeontongju.order.repository.DeliveryRepository;
 import com.jeontongju.order.repository.OrdersRepository;
 import com.jeontongju.order.repository.ProductOrderRepository;
+import com.jeontongju.order.repository.SettlementRepository;
 import com.jeontongju.order.repository.criteria.OrderSpecifications;
 import com.jeontongju.order.repository.response.OrderResponseDto;
 import com.jeontongju.order.repository.response.ProductResponseDto;
-import com.jeontongju.order.util.KafkaTopicNameInfo;
-import com.jeontongju.payment.dto.temp.OrderCreationDto;
-import com.jeontongju.payment.dto.temp.OrderInfoDto;
-import com.jeontongju.payment.dto.temp.ProductInfoDto;
-import com.jeontongju.payment.enums.temp.FeignFormat;
+import io.github.bitbox.bitbox.dto.AddressDto;
+import io.github.bitbox.bitbox.dto.AuctionOrderDto;
+import io.github.bitbox.bitbox.dto.FeignFormat;
+import io.github.bitbox.bitbox.dto.OrderCancelDto;
+import io.github.bitbox.bitbox.dto.OrderConfirmDto;
+import io.github.bitbox.bitbox.dto.OrderCreationDto;
+import io.github.bitbox.bitbox.dto.OrderInfoDto;
+import io.github.bitbox.bitbox.dto.PaymentInfoDto;
+import io.github.bitbox.bitbox.dto.ProductInfoDto;
+import io.github.bitbox.bitbox.dto.ProductUpdateDto;
+import io.github.bitbox.bitbox.util.KafkaTopicNameInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -47,6 +51,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -59,6 +65,7 @@ public class OrderService {
     private final DeliveryRepository deliveryRepository;
     private final OrdersRepository ordersRepository;
     private final ProductOrderRepository productOrderRepository;
+    private final SettlementRepository settlementRepository;
     private final PaymentFeignServiceClient paymentFeignServiceClient;
     private final ConsumerFeignServiceClient consumerFeignServiceClient;
     private final KafkaProcessor<OrderCancelDto> orderCancelDtoKafkaTemplate;
@@ -128,17 +135,18 @@ public class OrderService {
     @Transactional
     public long confirmProductOrder(Long productOrderId){
         ProductOrder productOrder = productOrderRepository.findById(productOrderId).orElseThrow(() -> new ProductOrderIdNotFoundException("해당 상품코드가 존재하지 않습니다."));
-        if(getDelivery(productOrder.getDelivery().getDeliveryId()).getDeliveryStatus() != ProductOrderStatusEnum.COMPLETED){ throw new DeliveryStatusException("구매 확정은 배송완료 상품에 대해서만 가능합니다."); }
+        if(getDelivery(productOrder.getDelivery().getDeliveryId()).getDeliveryStatus() != ProductOrderStatusEnum.COMPLETED ||
+                productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED ){ throw new DeliveryStatusException("구매 확정은 배송완료 상품에 대해서만 가능합니다."); }
         productOrder.changeOrderStatusToConfirmStatus();
-        FeignFormat<Long> orderConfirmPoint = consumerFeignServiceClient.getOrderConfirmPoint(OrderConfirmDto.builder().productAmount(productOrder.getProductRealAmount()).build());
+        FeignFormat<Long> orderConfirmPoint = consumerFeignServiceClient.getOrderConfirmPoint(OrderConfirmDto.builder().consumerId(productOrder.getConsumerId()).productAmount(productOrder.getProductRealAmount()).build());
         if(orderConfirmPoint.getCode() != 200){ throw new FeignServerNotAvailableException("유저 서버에서 예외가 발생했습니다."); }
         return orderConfirmPoint.getData();
     }
 
     @Transactional
     public void createAuctionOrder(AuctionOrderDto auctionOrderDto, AddressDto addressDto){
-        Orders orders = Orders.builder().ordersId(UUID.randomUUID().toString()).consumerId(auctionOrderDto.getConsumerId()).orderDate(auctionOrderDto.getOrderDate()).
-                totalPrice(auctionOrderDto.getTotalPrice()).isAuction(true).paymentMethod(auctionOrderDto.getPaymentMethod()).build();
+        Orders orders = Orders.builder().ordersId(UUID.randomUUID().toString()).consumerId(auctionOrderDto.getConsumerId()).orderDate(auctionOrderDto.getOrderDate())
+                        .totalPrice(auctionOrderDto.getTotalPrice()).isAuction(true).paymentMethod(auctionOrderDto.getPaymentMethod()).build();
         ordersRepository.save(orders);
 
         ProductOrder productOrder = ProductOrder.builder().orders(orders).productId(auctionOrderDto.getProductId()).productName(auctionOrderDto.getProductName())
@@ -159,43 +167,65 @@ public class OrderService {
         if(orders.isCancelledOrAuction()){ throw new OrderStatusException("취소된 주문이거나 경매 주문 입니다."); }
         orders.changeProductOrderStatusToCancelStatus();
 
+        List<ProductUpdateDto> productUpdateDtoList = new ArrayList<>();
+        List<Long> productOrderIds = new ArrayList<>();
         for(ProductOrder productOrder : orders.getProductOrders()){
             if(productOrder.getProductOrderStatus() != ProductOrderStatusEnum.ORDER){
                 throw new InvalidOrderCancellationException("주문 취소는 모든 상품들이 주문완료 상태여야 합니다.");
             }
+            if(productOrder.getDelivery().getDeliveryStatus() != null){
+                throw new InvalidOrderCancellationException("주문 취소를 하려면 모든 상품들은 배송상태가 비어있어야 합니다.");
+            }
+
             productOrder.changeOrderStatusToCancelStatus();
+            productOrderIds.add(productOrder.getProductOrderId());
+            productUpdateDtoList.add(ProductUpdateDto.builder().productId(productOrder.getProductId()).productCount(productOrder.getProductCount()).build());
         }
 
         PaymentInfoDto paymentInfo = getPaymentInfo(orders);
 
         orderCancelDtoKafkaTemplate.send(getOrderCancelTopicName(paymentInfo.getMinusPointAmount(), paymentInfo.getCouponCode()),
-                OrderCancelDto.builder().consumerId(orders.getConsumerId()).ordersId(orders.getOrdersId())
-                        .couponCode(paymentInfo.getCouponCode()).point(paymentInfo.getMinusPointAmount()).cancelAmount(null).build());
+                        OrderCancelDto.builder().consumerId(orders.getConsumerId()).ordersId(orders.getOrdersId())
+                        .couponCode(paymentInfo.getCouponCode()).point(paymentInfo.getMinusPointAmount()).cancelAmount(null)
+                        .cancelOrderId(orderId).cancelProductOrderId(productOrderIds).productUpdateDtoList(productUpdateDtoList).build());
     }
 
     @Transactional
     public void cancelProductOrder(Long productOrderId){
         ProductOrder productOrder = productOrderRepository.findById(productOrderId).orElseThrow(() -> new ProductOrderIdNotFoundException("해당 상품이 존재하지 않습니다."));
 
-        if(productOrder.getProductOrderStatus() != ProductOrderStatusEnum.ORDER){
-            throw new CancelProductOrderException("주문완료 상태인 상품만 취소할 수 있습니다.");
-        }
+        if(productOrder.getProductOrderStatus() != ProductOrderStatusEnum.ORDER){ throw new CancelProductOrderException("주문완료 상태인 상품만 취소할 수 있습니다.");}
+        if(productOrder.getDelivery().getDeliveryStatus() != null){throw new CancelProductOrderException("배송중인 상품은 취소가 불가능합니다.");}
         productOrder.changeOrderStatusToCancelStatus();
 
         Orders orders = productOrder.getOrders();
         if(orders.isCancelledOrAuction()){ throw new OrderStatusException("취소된 주문이거나 경매 주문 입니다."); }
 
         String couponCode = null;
-
+        String orderId = null;
         if(orders.getProductOrders().stream().allMatch(product -> product.getProductOrderStatus() == ProductOrderStatusEnum.CANCEL)){
             couponCode = getPaymentInfo(orders).getCouponCode();
             orders.changeProductOrderStatusToCancelStatus();
+            orderId = orders.getOrdersId();
         }
 
         OrderCancelDto orderCancelDto = OrderCancelDto.builder().consumerId(orders.getConsumerId()).ordersId(orders.getOrdersId())
-                .couponCode(couponCode).point(productOrder.getProductRealPointAmount()).cancelAmount(productOrder.getProductRealAmount()).build();
+                .couponCode(couponCode).point(productOrder.getProductRealPointAmount()).cancelAmount(productOrder.getProductRealAmount())
+                .cancelOrderId(orderId).cancelProductOrderId(List.of(productOrderId))
+                .productUpdateDtoList(List.of(new ProductUpdateDto(productOrder.getProductId(), productOrder.getProductCount()))).build();
 
         orderCancelDtoKafkaTemplate.send(getOrderCancelTopicName(productOrder.getProductRealPointAmount(), couponCode), orderCancelDto);
+    }
+
+    @Transactional
+    public void revertOrderStatus(String orderId, List<Long> productOrderId){
+        if(orderId != null){
+            ordersRepository.findById(orderId).orElseThrow(()->new OrderIdNotFoundException("존재하지 않는 주문번호")).changeProductOrderStatusToNormalStatus();
+        }
+
+        for(Long id : productOrderId){
+            productOrderRepository.findById(id).orElseThrow(()->new ProductOrderIdNotFoundException("존재하지 않는 상품 주문번호")).changeOrderStatusToOrderStatus();
+        }
     }
 
     public ConsumerOrderListResponseDto getConsumerOrderList(Long consumerId, Boolean isAuction, Pageable pageable){
@@ -203,34 +233,39 @@ public class OrderService {
 
         List<OrderListDto> orderListDtos = new ArrayList<>();
         for(Orders orders : ordersWithPage.getContent()){
-            OrderResponseDto orderResponseDto = OrderResponseDto.builder().ordersId(orders.getOrdersId()).orderDate(String.valueOf(orders.getOrderDate()))
-                    .orderStatus(orders.getOrderStatus()).isAuction(orders.getIsAuction()).build();
-
+            boolean isAbleToCancel = true;
             List<ProductResponseDto> productResponseDtoList = new ArrayList<>();
             DeliveryResponseDto deliveryResponseDto = null;
 
             for(ProductOrder productOrder : orders.getProductOrders()){
                 Delivery delivery = productOrder.getDelivery();
-                productResponseDtoList.add(ProductResponseDto.productOrderToProductResponseDto(productOrder, getProductOrderStatusEnum(productOrder, delivery)));
+                ProductOrderStatusEnum productOrderStatusEnum = getProductOrderStatusEnum(productOrder, delivery);
+                if(productOrderStatusEnum != ProductOrderStatusEnum.ORDER){isAbleToCancel = false;}
+                productResponseDtoList.add(ProductResponseDto.productOrderToProductResponseDto(productOrder, productOrderStatusEnum));
                 if(deliveryResponseDto == null){ deliveryResponseDto = DeliveryResponseDto.DeliveryToDeliveryResponseDto(delivery); }
             }
 
+            OrderResponseDto orderResponseDto = OrderResponseDto.builder().ordersId(orders.getOrdersId()).orderDate(String.valueOf(orders.getOrderDate()))
+                    .isAbleToCancel(isAbleToCancel).orderStatus(orders.getOrderStatus()).isAuction(orders.getIsAuction()).build();
             orderListDtos.add(OrderListDto.builder().order(orderResponseDto).product(productResponseDtoList).delivery(deliveryResponseDto).payment(getPaymentInfo(orders)).build());
         }
 
-        ConsumerOrderListResponseDto consumerOrderListResponseDto = ConsumerOrderListResponseDto.builder().orderLists(orderListDtos).build();
+        ConsumerOrderListResponseDto consumerOrderListResponseDto = ConsumerOrderListResponseDto.builder().content(orderListDtos).build();
         setPageableInfo(consumerOrderListResponseDto, ordersWithPage);
         return consumerOrderListResponseDto;
     }
 
-    public ProductOrderStatusEnum getDeliveryStatus(Long productOrderId){
+    public Boolean getDeliveryStatus(Long productOrderId){
         ProductOrder productOrder = productOrderRepository.findById(productOrderId).orElseThrow(() -> new RuntimeException(""));
         Orders orders = ordersRepository.findById(productOrder.getOrders().getOrdersId()).orElseThrow(()->new RuntimeException(""));
-        if(orders.getIsAuction()){
-            throw new RuntimeException("");
-        }
+        if(orders.getIsAuction()){ throw new RuntimeException("");}
 
-        return productOrder.getDelivery().getDeliveryStatus();
+        LocalDateTime orderDate = productOrder.getOrderDate();
+        LocalDateTime now = LocalDateTime.now();
+        long secondsBetween = ChronoUnit.SECONDS.between(orderDate, now);
+        boolean is14DaysPassed = secondsBetween >= (14 * 24 * 60 * 60);
+
+        return productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED && !is14DaysPassed;
     }
 
     public SellerOrderListResponseDto getSellerOrderList(Long sellerId, String orderDate, String productId, boolean isDeliveryCodeNull, Pageable pageable){
@@ -270,6 +305,14 @@ public class OrderService {
         return consumerOrderListResponseDtoForAdmin;
     }
 
+    public List<SettlementForAdmin> getSettlementForAdmin(Long sellerId, Long year){
+        return settlementRepository.findBySellerIdAndSettlementYear(sellerId,year);
+    }
+
+    public SettlementForSeller getSettlementForSeller(Long sellerId, Long year, Long month){
+        return settlementRepository.findBySellerIdAndSettlementYearAndSettlementMonth(sellerId,year, month);
+    }
+
     private PaymentInfoDto getPaymentInfo(Orders orders) {
         FeignFormat<PaymentInfoDto> paymentInfo = paymentFeignServiceClient.getPaymentInfo(orders.getOrdersId());
         if(paymentInfo.getCode() != 200){
@@ -285,7 +328,7 @@ public class OrderService {
         }else if(couponCode!=null){
             topicName = KafkaTopicNameInfo.CANCEL_ORDER_COUPON;
         }else{
-            topicName = KafkaTopicNameInfo.CANCEL_PAYMENT;
+            topicName = KafkaTopicNameInfo.CANCEL_ORDER_STOCK;
         }
         return topicName;
     }

@@ -16,4 +16,5 @@ public class OrderResponseDto {
     private String orderDate;
     private OrderStatusEnum orderStatus;
     private Boolean isAuction;
+    private Boolean isAbleToCancel;
 }
