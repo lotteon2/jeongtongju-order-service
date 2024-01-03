@@ -328,7 +328,7 @@ public class OrderService {
         }else if(couponCode!=null){
             topicName = KafkaTopicNameInfo.CANCEL_ORDER_COUPON;
         }else{
-            topicName = KafkaTopicNameInfo.CANCEL_ORDER_STOCK;
+            topicName = KafkaTopicNameInfo.CANCEL_ORDER_PAYMENT;
         }
         return topicName;
     }
