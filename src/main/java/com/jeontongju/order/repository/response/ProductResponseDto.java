@@ -33,6 +33,6 @@ public class ProductResponseDto {
                 .productName(productOrder.getProductName()).productCount(productOrder.getProductCount()).productPrice(productOrder.getProductPrice())
                 .productTotalAmount(productOrder.getProductCount()*productOrder.getProductPrice()).orderDate(productOrder.getOrderDate()).productOrderStatus(productOrderStatus)
                 .productThumbnailImageUrl(productOrder.getProductThumbnailImageUrl()).sellerId(productOrder.getSellerId()).sellerName(productOrder.getSellerName())
-                .isReviewAllowed(LocalDateTime.now().isAfter(productOrder.getOrderDate().plusDays(14)) && productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED).build();
+                .isReviewAllowed( (!LocalDateTime.now().isAfter(productOrder.getOrderDate().plusDays(14))) && productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED).build();
     }
 }
