@@ -268,8 +268,8 @@ public class OrderService {
         return productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED && !is14DaysPassed;
     }
 
-    public SellerOrderListResponseDto getSellerOrderList(Long sellerId, String startDate, String endDate, String productId, ProductOrderStatusEnum productStatus, Pageable pageable){
-        Page<ProductOrder> productOrdersWithPage = productOrderRepository.findAll(OrderSpecifications.buildSellerProductOrdersSpecification(sellerId, startDate, endDate, productId, productStatus), pageable);
+    public SellerOrderListResponseDto getSellerOrderList(Long sellerId, String startDate, String endDate, String productId, ProductOrderStatusEnum productStatus,boolean isDeliveryCodeNull, Pageable pageable){
+        Page<ProductOrder> productOrdersWithPage = productOrderRepository.findAll(OrderSpecifications.buildSellerProductOrdersSpecification(sellerId, startDate, endDate, productId, productStatus,isDeliveryCodeNull), pageable);
         List<ProductOrder> productOrderList = productOrdersWithPage.getContent();
 
         List<SellerOrderListDto> sellerOrderListDtoList = new ArrayList<>();

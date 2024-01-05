@@ -31,7 +31,7 @@ public class OrderSpecifications {
         };
     }
 
-    public static Specification<ProductOrder> buildSellerProductOrdersSpecification(Long sellerId, String startDate, String endDate , String productId, ProductOrderStatusEnum productStatus) {
+    public static Specification<ProductOrder> buildSellerProductOrdersSpecification(Long sellerId, String startDate, String endDate , String productId, ProductOrderStatusEnum productStatus, boolean isDeliveryCodeNull) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(criteriaBuilder.equal(root.get("sellerId"), sellerId));
@@ -43,7 +43,7 @@ public class OrderSpecifications {
                 predicates.add(criteriaBuilder.between(root.get("orderDate"), from, to));
             }
 
-            if (!productId.equals("null")) {
+            if (!productId.equals("null") && !productId.equals("undefined")) {
                 predicates.add(criteriaBuilder.equal(root.get("productId"), productId));
             }
 
@@ -62,6 +62,11 @@ public class OrderSpecifications {
                     predicates.add(criteriaBuilder.equal(root.get("productOrderStatus"), ProductOrderStatusEnum.ORDER));
                     predicates.add(isDeliveryStatusCondition(criteriaBuilder, root, ProductOrderStatusEnum.SHIPPING));
                 }
+            }
+
+            if(isDeliveryCodeNull){
+                predicates.add(criteriaBuilder.equal(root.get("productOrderStatus"), ProductOrderStatusEnum.ORDER));
+                predicates.add(isDeliveryCodeNullCondition(criteriaBuilder, root));
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));

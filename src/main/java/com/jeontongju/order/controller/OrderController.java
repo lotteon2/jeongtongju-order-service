@@ -81,7 +81,7 @@ public class OrderController {
             @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable,
             @RequestHeader MemberRoleEnum memberRole,
             @RequestHeader Long memberId, @RequestParam String startDate, @RequestParam String endDate,
-            @RequestParam String productId, @RequestParam String productStatus){
+            @RequestParam String productId, @RequestParam String productStatus, @RequestParam boolean isDeliveryCodeNull){
         checkMemberRole(memberRole, MemberRoleEnum.ROLE_SELLER);
         ProductOrderStatusEnum productOrderStatusEnum = null;
         if(!productStatus.equals("null")){
@@ -92,7 +92,7 @@ public class OrderController {
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
                 .detail("주문내역 조회 완료")
-                .data(orderService.getSellerOrderList(memberId, startDate, endDate , productId, productOrderStatusEnum, pageable))
+                .data(orderService.getSellerOrderList(memberId, startDate, endDate , productId, productOrderStatusEnum,isDeliveryCodeNull, pageable))
         .build());
     }
 
@@ -105,7 +105,7 @@ public class OrderController {
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
                 .detail("주문내역 조회 완료")
-                .data(orderService.getSellerOrderList(sellerId, "null", "null", "null",null, pageable))
+                .data(orderService.getSellerOrderList(sellerId, "null", "null", "null",null,false, pageable))
         .build());
     }
 
