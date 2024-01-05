@@ -81,13 +81,18 @@ public class OrderController {
             @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable,
             @RequestHeader MemberRoleEnum memberRole,
             @RequestHeader Long memberId, @RequestParam String startDate, @RequestParam String endDate,
-            @RequestParam String productId, @RequestParam(required = false) ProductOrderStatusEnum productStatus){
+            @RequestParam String productId, @RequestParam String productStatus){
         checkMemberRole(memberRole, MemberRoleEnum.ROLE_SELLER);
+        ProductOrderStatusEnum productOrderStatusEnum = null;
+        if(!productStatus.equals("null")){
+            productOrderStatusEnum = ProductOrderStatusEnum.valueOf(productStatus);
+        }
+
         return ResponseEntity.ok().body(ResponseFormat.<SellerOrderListResponseDto>builder()
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
                 .detail("주문내역 조회 완료")
-                .data(orderService.getSellerOrderList(memberId, startDate, endDate , productId, productStatus, pageable))
+                .data(orderService.getSellerOrderList(memberId, startDate, endDate , productId, productOrderStatusEnum, pageable))
         .build());
     }
 
