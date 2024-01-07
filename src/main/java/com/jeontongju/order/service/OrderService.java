@@ -10,6 +10,7 @@ import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDto;
 import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDtoForAdmin;
 import com.jeontongju.order.dto.response.consumer.DeliveryResponseDto;
 import com.jeontongju.order.dto.response.consumer.OrderListDto;
+import com.jeontongju.order.dto.response.seller.DashboardResponseDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListResponseDto;
 import com.jeontongju.order.dto.response.seller.SettlementForSeller;
@@ -32,7 +33,9 @@ import com.jeontongju.order.repository.ProductOrderRepository;
 import com.jeontongju.order.repository.SettlementRepository;
 import com.jeontongju.order.repository.criteria.OrderSpecifications;
 import com.jeontongju.order.repository.response.OrderResponseDto;
+import com.jeontongju.order.repository.response.OrderStatusDtoForDashboard;
 import com.jeontongju.order.repository.response.ProductResponseDto;
+import com.jeontongju.order.repository.response.WeeklySalesDto;
 import io.github.bitbox.bitbox.dto.AddressDto;
 import io.github.bitbox.bitbox.dto.AuctionOrderDto;
 import io.github.bitbox.bitbox.dto.FeignFormat;
@@ -51,10 +54,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -313,6 +321,31 @@ public class OrderService {
         return settlementRepository.findBySellerIdAndSettlementYearAndSettlementMonth(sellerId,year, month);
     }
 
+    public DashboardResponseDto getDashboardForSeller(Long sellerId, String date, Long stockUnderFive){
+        OrderStatusDtoForDashboard orderStatsInDateRange = productOrderRepository.getOrderStatsInDateRange(convertDate(date,30L), date, sellerId);
+        orderStatsInDateRange.setNullToZero();
+
+        Long trackingNumberNotEntered = productOrderRepository.countNullDeliveryCodesBySellerId(sellerId);
+
+        Long monthSales = productOrderRepository.sumOrderTotalPriceByMonth(date.substring(0,6), sellerId);
+        Long monthSettlement = (long) (monthSales*0.95);
+
+        Map<String, Long> week = new HashMap<>();
+        week.put("monday",0L);week.put("tuesday",0L);week.put("wednesday",0L);week.put("thursday",0L);
+        week.put("friday",0L);week.put("saturday",0L);week.put("sunday",0L);
+
+        for(WeeklySalesDto weeklySalesDto : productOrderRepository.sumOrderTotalPriceInDateRange(convertDate(date, 7L), date, sellerId)){
+            week.put(getDayOfWeek(weeklySalesDto.getOrderDay()), weeklySalesDto.getTotalAmount());
+        }
+
+        return DashboardResponseDto.builder().order(orderStatsInDateRange.getOrdered()).shipping(orderStatsInDateRange.getShipping())
+                .completed(orderStatsInDateRange.getCompleted()).confirmed(orderStatsInDateRange.getConfirmed()).cancel(orderStatsInDateRange.getCancel())
+                .monthSales(monthSales).monthSettlement(monthSettlement).stockUnderFive(stockUnderFive).trackingNumberNotEntered(trackingNumberNotEntered)
+                .monday(week.get("monday")).tuesday(week.get("tuesday")).wednesday(week.get("wednesday")).thursday(week.get("thursday"))
+                .friday(week.get("friday")).saturday(week.get("saturday")).sunday(week.get("sunday"))
+        .build();
+    }
+
     private PaymentInfoDto getPaymentInfo(Orders orders) {
         FeignFormat<PaymentInfoDto> paymentInfo = paymentFeignServiceClient.getPaymentInfo(orders.getOrdersId());
         if(paymentInfo.getCode() != 200){
@@ -367,4 +400,15 @@ public class OrderService {
         orderResponseInfo.setOrderStatus(getProductOrderStatusEnum(productOrder, delivery));
         orderResponseInfo.setIsAuction(orders.getIsAuction());
     }
+
+    private String convertDate(String dateString, Long days){
+        LocalDate date = LocalDate.parse(dateString, DateTimeFormatter.ofPattern("yyyyMMdd"));
+        LocalDate thirtyDaysAgo = date.minusDays(days);
+        return thirtyDaysAgo.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+    }
+
+    private String getDayOfWeek(String dateString) {
+        return LocalDate.parse(dateString, DateTimeFormatter.ISO_DATE).getDayOfWeek().name().toLowerCase();
+    }
+
 }

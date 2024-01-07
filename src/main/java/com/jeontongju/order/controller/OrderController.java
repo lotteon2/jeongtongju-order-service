@@ -8,11 +8,14 @@ import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDto;
 import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDtoForAdmin;
 import com.jeontongju.order.dto.response.consumer.OrderStatusDto;
 import com.jeontongju.order.dto.response.consumer.ProductOrderConfirmResponseDto;
+import com.jeontongju.order.dto.response.seller.DashboardResponseDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListResponseDto;
 import com.jeontongju.order.dto.response.seller.SettlementForSeller;
 import com.jeontongju.order.enums.ProductOrderStatusEnum;
 import com.jeontongju.order.exception.InvalidPermissionException;
+import com.jeontongju.order.feign.ProductFeignServiceClient;
 import com.jeontongju.order.service.OrderService;
+import io.github.bitbox.bitbox.dto.FeignFormat;
 import io.github.bitbox.bitbox.dto.ResponseFormat;
 import io.github.bitbox.bitbox.enums.MemberRoleEnum;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +42,7 @@ import java.util.List;
 @RequestMapping("/api")
 public class OrderController {
     private final OrderService orderService;
+    private final ProductFeignServiceClient productFeignServiceClient;
 
     @GetMapping("/order/consumer")
     public ResponseEntity<ResponseFormat<ConsumerOrderListResponseDto>> getConsumerOrderList(
@@ -121,7 +125,6 @@ public class OrderController {
         .build());
     }
 
-    // 내 정산 내역 조회(셀러)
     @GetMapping("/settlement/seller/year/{year}/month/{month}")
     public ResponseEntity<ResponseFormat<SettlementForSeller>> getSettlementForSeller(@PathVariable Long year, @PathVariable Long month,
                                                                                       @RequestHeader Long memberId, @RequestHeader MemberRoleEnum memberRole){
@@ -131,6 +134,19 @@ public class OrderController {
                 .message(HttpStatus.OK.getReasonPhrase())
                 .detail("나의 정산 내역 조회 완료")
                 .data(orderService.getSettlementForSeller(memberId,year,month))
+        .build());
+    }
+
+    @GetMapping("/seller/dashboard")
+    public ResponseEntity<ResponseFormat<DashboardResponseDto>> getDashboardForSeller(@RequestHeader Long memberId, @RequestHeader MemberRoleEnum memberRole, @RequestParam String date){
+        checkMemberRole(memberRole, MemberRoleEnum.ROLE_SELLER);
+        productFeignServiceClient.getStockUnderFive(memberId).getData();
+
+        return ResponseEntity.ok().body(ResponseFormat.<DashboardResponseDto>builder()
+                .code(HttpStatus.OK.value())
+                .message(HttpStatus.OK.getReasonPhrase())
+                .detail("대시보드 조회 완료")
+                .data(orderService.getDashboardForSeller(memberId,date, 0L))
         .build());
     }
 
