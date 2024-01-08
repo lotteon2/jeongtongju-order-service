@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
-public class DashboardResponseDto {
+public class DashboardResponseDtoForSeller {
     private Long order;
     private Long shipping;
     private Long completed;

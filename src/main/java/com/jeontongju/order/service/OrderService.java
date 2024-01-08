@@ -3,6 +3,11 @@ package com.jeontongju.order.service;
 import com.jeontongju.order.domain.Delivery;
 import com.jeontongju.order.domain.Orders;
 import com.jeontongju.order.domain.ProductOrder;
+import com.jeontongju.order.dto.response.admin.DashboardResponseDtoForAdmin;
+import com.jeontongju.order.dto.response.admin.ProductRank;
+import com.jeontongju.order.dto.response.admin.SellerProductMonthDto;
+import com.jeontongju.order.dto.response.admin.SellerRank;
+import com.jeontongju.order.dto.response.admin.SellerRankMonthDto;
 import com.jeontongju.order.dto.response.admin.SettlementForAdmin;
 import com.jeontongju.order.dto.response.common.OrderResponseCommonDto;
 import com.jeontongju.order.dto.response.common.PageInfoDto;
@@ -10,7 +15,7 @@ import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDto;
 import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDtoForAdmin;
 import com.jeontongju.order.dto.response.consumer.DeliveryResponseDto;
 import com.jeontongju.order.dto.response.consumer.OrderListDto;
-import com.jeontongju.order.dto.response.seller.DashboardResponseDto;
+import com.jeontongju.order.dto.response.seller.DashboardResponseDtoForSeller;
 import com.jeontongju.order.dto.response.seller.SellerOrderListDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListResponseDto;
 import com.jeontongju.order.dto.response.seller.SettlementForSeller;
@@ -32,6 +37,8 @@ import com.jeontongju.order.repository.OrdersRepository;
 import com.jeontongju.order.repository.ProductOrderRepository;
 import com.jeontongju.order.repository.SettlementRepository;
 import com.jeontongju.order.repository.criteria.OrderSpecifications;
+import com.jeontongju.order.repository.response.MonthProductRankDto;
+import com.jeontongju.order.repository.response.MonthSellerRankDto;
 import com.jeontongju.order.repository.response.OrderResponseDto;
 import com.jeontongju.order.repository.response.OrderStatusDtoForDashboard;
 import com.jeontongju.order.repository.response.ProductResponseDto;
@@ -54,16 +61,17 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 @Service
 @Slf4j
@@ -321,7 +329,7 @@ public class OrderService {
         return settlementRepository.findBySellerIdAndSettlementYearAndSettlementMonth(sellerId,year, month);
     }
 
-    public DashboardResponseDto getDashboardForSeller(Long sellerId, String date, Long stockUnderFive){
+    public DashboardResponseDtoForSeller getDashboardForSeller(Long sellerId, String date, Long stockUnderFive){
         OrderStatusDtoForDashboard orderStatsInDateRange = productOrderRepository.getOrderStatsInDateRange(convertDate(date,30L), date, sellerId);
         orderStatsInDateRange.setNullToZero();
 
@@ -338,12 +346,88 @@ public class OrderService {
             week.put(getDayOfWeek(weeklySalesDto.getOrderDay()), weeklySalesDto.getTotalAmount());
         }
 
-        return DashboardResponseDto.builder().order(orderStatsInDateRange.getOrdered()).shipping(orderStatsInDateRange.getShipping())
+        return DashboardResponseDtoForSeller.builder().order(orderStatsInDateRange.getOrdered()).shipping(orderStatsInDateRange.getShipping())
                 .completed(orderStatsInDateRange.getCompleted()).confirmed(orderStatsInDateRange.getConfirmed()).cancel(orderStatsInDateRange.getCancel())
                 .monthSales(monthSales).monthSettlement(monthSettlement).stockUnderFive(stockUnderFive).trackingNumberNotEntered(trackingNumberNotEntered)
                 .monday(week.get("monday")).tuesday(week.get("tuesday")).wednesday(week.get("wednesday")).thursday(week.get("thursday"))
                 .friday(week.get("friday")).saturday(week.get("saturday")).sunday(week.get("sunday"))
         .build();
+    }
+
+    public DashboardResponseDtoForAdmin getDashboardForAdmin(String date){
+        Long totalPrice = productOrderRepository.sumOrderTotalPriceByMonthExternal(date);
+        List<MonthSellerRankDto> monthlySellerRanking = productOrderRepository.getTop5MonthlySellerRanking(date);
+
+        List<SellerRankMonthDto> sellerRankList = new ArrayList<>();
+        IntStream.range(0, 5)
+                .forEach(i -> {
+                    Long sellerId = null;
+                    String sellerName = null;
+                    Long price = null;
+
+                    if (i < monthlySellerRanking.size()) {
+                        sellerId = monthlySellerRanking.get(i).getSellerId();
+                        sellerName = monthlySellerRanking.get(i).getSellerName();
+                        price = monthlySellerRanking.get(i).getTotalPrice();
+                    }
+
+                    sellerRankList.add(SellerRankMonthDto.builder()
+                            .sellerId(sellerId)
+                            .sellerName(sellerName)
+                            .totalPrice(price)
+                            .build());
+                });
+
+        List<MonthProductRankDto> top5MonthlyProductRanking = productOrderRepository.getTop5MonthlyProductRanking(date);
+
+        List<SellerProductMonthDto> sellerProductMonthDtoList = new ArrayList<>();
+        IntStream.range(0, 5)
+                .forEach(i -> {
+                    Long sellerId = null;
+                    String sellerName = null;
+                    String productId = null;
+                    String productName = null;
+                    Long totalCount = null;
+
+                    if (i < top5MonthlyProductRanking.size()) {
+                        sellerId = top5MonthlyProductRanking.get(i).getSellerId();
+                        sellerName = top5MonthlyProductRanking.get(i).getSellerName();
+                        productId = top5MonthlyProductRanking.get(i).getProductId();
+                        productName = top5MonthlyProductRanking.get(i).getProductName();
+                        totalCount = top5MonthlyProductRanking.get(i).getTotalCount();
+                    }
+
+                    sellerProductMonthDtoList.add(SellerProductMonthDto.builder()
+                            .sellerId(sellerId)
+                            .sellerName(sellerName)
+                            .productId(productId)
+                            .productName(productName)
+                            .totalCount(totalCount)
+                    .build());
+                });
+
+
+        return DashboardResponseDtoForAdmin.builder()
+                .totalSalesMonth(totalPrice)
+                .commissionMonth((long) (totalPrice * 0.05))
+                .monthSellerRank(SellerRank.builder()
+                        .one(sellerRankList.get(0))
+                        .two(sellerRankList.get(1))
+                        .three(sellerRankList.get(2))
+                        .four(sellerRankList.get(3))
+                        .five(sellerRankList.get(4))
+                .build())
+                .monthProductRank(ProductRank.builder()
+                        .one(sellerProductMonthDtoList.get(0))
+                        .two(sellerProductMonthDtoList.get(1))
+                        .three(sellerProductMonthDtoList.get(2))
+                        .four(sellerProductMonthDtoList.get(3))
+                        .five(sellerProductMonthDtoList.get(4)).build())
+                .build();
+    }
+
+    public List<Long> getConsumerOrderIdsBySellerId(long sellerId){
+        return productOrderRepository.findDistinctConsumersBySellerId(sellerId);
     }
 
     private PaymentInfoDto getPaymentInfo(Orders orders) {

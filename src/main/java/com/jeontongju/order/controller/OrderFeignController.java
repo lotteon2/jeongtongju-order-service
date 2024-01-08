@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/")
@@ -20,6 +22,14 @@ public class OrderFeignController {
         return FeignFormat.<Boolean>builder()
                 .code(HttpStatus.SC_OK)
                 .data(orderService.getDeliveryStatus(productOrderId))
+        .build();
+    }
+
+    @GetMapping("/sellers/{sellerId}/orders-consumer/ids")
+    public FeignFormat<List<Long>> getConsumerOrderIdsBySellerId(@PathVariable long sellerId){
+        return FeignFormat.<List<Long>>builder()
+                .code(HttpStatus.SC_OK)
+                .data(orderService.getConsumerOrderIdsBySellerId(sellerId))
         .build();
     }
 }
