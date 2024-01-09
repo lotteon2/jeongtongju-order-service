@@ -3,6 +3,11 @@ package com.jeontongju.order.service;
 import com.jeontongju.order.domain.Delivery;
 import com.jeontongju.order.domain.Orders;
 import com.jeontongju.order.domain.ProductOrder;
+import com.jeontongju.order.dto.response.admin.DashboardResponseDtoForAdmin;
+import com.jeontongju.order.dto.response.admin.ProductRank;
+import com.jeontongju.order.dto.response.admin.SellerProductMonthDto;
+import com.jeontongju.order.dto.response.admin.SellerRank;
+import com.jeontongju.order.dto.response.admin.SellerRankMonthDto;
 import com.jeontongju.order.dto.response.admin.SettlementForAdmin;
 import com.jeontongju.order.dto.response.common.OrderResponseCommonDto;
 import com.jeontongju.order.dto.response.common.PageInfoDto;
@@ -10,6 +15,7 @@ import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDto;
 import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDtoForAdmin;
 import com.jeontongju.order.dto.response.consumer.DeliveryResponseDto;
 import com.jeontongju.order.dto.response.consumer.OrderListDto;
+import com.jeontongju.order.dto.response.seller.DashboardResponseDtoForSeller;
 import com.jeontongju.order.dto.response.seller.SellerOrderListDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListResponseDto;
 import com.jeontongju.order.dto.response.seller.SettlementForSeller;
@@ -31,8 +37,12 @@ import com.jeontongju.order.repository.OrdersRepository;
 import com.jeontongju.order.repository.ProductOrderRepository;
 import com.jeontongju.order.repository.SettlementRepository;
 import com.jeontongju.order.repository.criteria.OrderSpecifications;
+import com.jeontongju.order.repository.response.MonthProductRankDto;
+import com.jeontongju.order.repository.response.MonthSellerRankDto;
 import com.jeontongju.order.repository.response.OrderResponseDto;
+import com.jeontongju.order.repository.response.OrderStatusDtoForDashboard;
 import com.jeontongju.order.repository.response.ProductResponseDto;
+import com.jeontongju.order.repository.response.WeeklySalesDto;
 import io.github.bitbox.bitbox.dto.AddressDto;
 import io.github.bitbox.bitbox.dto.AuctionOrderDto;
 import io.github.bitbox.bitbox.dto.FeignFormat;
@@ -51,11 +61,17 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 @Service
 @Slf4j
@@ -268,8 +284,8 @@ public class OrderService {
         return productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED && !is14DaysPassed;
     }
 
-    public SellerOrderListResponseDto getSellerOrderList(Long sellerId, String orderDate, String productId, boolean isDeliveryCodeNull, Pageable pageable){
-        Page<ProductOrder> productOrdersWithPage = productOrderRepository.findAll(OrderSpecifications.buildSellerProductOrdersSpecification(sellerId, orderDate, productId, isDeliveryCodeNull), pageable);
+    public SellerOrderListResponseDto getSellerOrderList(Long sellerId, String startDate, String endDate, String productId, ProductOrderStatusEnum productStatus,boolean isDeliveryCodeNull, Pageable pageable){
+        Page<ProductOrder> productOrdersWithPage = productOrderRepository.findAll(OrderSpecifications.buildSellerProductOrdersSpecification(sellerId, startDate, endDate, productId, productStatus,isDeliveryCodeNull), pageable);
         List<ProductOrder> productOrderList = productOrdersWithPage.getContent();
 
         List<SellerOrderListDto> sellerOrderListDtoList = new ArrayList<>();
@@ -313,6 +329,107 @@ public class OrderService {
         return settlementRepository.findBySellerIdAndSettlementYearAndSettlementMonth(sellerId,year, month);
     }
 
+    public DashboardResponseDtoForSeller getDashboardForSeller(Long sellerId, String date, Long stockUnderFive){
+        OrderStatusDtoForDashboard orderStatsInDateRange = productOrderRepository.getOrderStatsInDateRange(convertDate(date,30L), date, sellerId);
+        orderStatsInDateRange.setNullToZero();
+
+        Long trackingNumberNotEntered = productOrderRepository.countNullDeliveryCodesBySellerId(sellerId);
+
+        Long monthSales = productOrderRepository.sumOrderTotalPriceByMonth(date.substring(0,6), sellerId);
+        Long monthSettlement = (long) (monthSales*0.95);
+
+        Map<String, Long> week = new HashMap<>();
+        week.put("monday",0L);week.put("tuesday",0L);week.put("wednesday",0L);week.put("thursday",0L);
+        week.put("friday",0L);week.put("saturday",0L);week.put("sunday",0L);
+
+        for(WeeklySalesDto weeklySalesDto : productOrderRepository.sumOrderTotalPriceInDateRange(convertDate(date, 7L), date, sellerId)){
+            week.put(getDayOfWeek(weeklySalesDto.getOrderDay()), weeklySalesDto.getTotalAmount());
+        }
+
+        return DashboardResponseDtoForSeller.builder().order(orderStatsInDateRange.getOrdered()).shipping(orderStatsInDateRange.getShipping())
+                .completed(orderStatsInDateRange.getCompleted()).confirmed(orderStatsInDateRange.getConfirmed()).cancel(orderStatsInDateRange.getCancel())
+                .monthSales(monthSales).monthSettlement(monthSettlement).stockUnderFive(stockUnderFive).trackingNumberNotEntered(trackingNumberNotEntered)
+                .monday(week.get("monday")).tuesday(week.get("tuesday")).wednesday(week.get("wednesday")).thursday(week.get("thursday"))
+                .friday(week.get("friday")).saturday(week.get("saturday")).sunday(week.get("sunday"))
+        .build();
+    }
+
+    public DashboardResponseDtoForAdmin getDashboardForAdmin(String date){
+        Long totalPrice = productOrderRepository.sumOrderTotalPriceByMonthExternal(date);
+        List<MonthSellerRankDto> monthlySellerRanking = productOrderRepository.getTop5MonthlySellerRanking(date);
+
+        List<SellerRankMonthDto> sellerRankList = new ArrayList<>();
+        IntStream.range(0, 5)
+                .forEach(i -> {
+                    Long sellerId = null;
+                    String sellerName = null;
+                    Long price = null;
+
+                    if (i < monthlySellerRanking.size()) {
+                        sellerId = monthlySellerRanking.get(i).getSellerId();
+                        sellerName = monthlySellerRanking.get(i).getSellerName();
+                        price = monthlySellerRanking.get(i).getTotalPrice();
+                    }
+
+                    sellerRankList.add(SellerRankMonthDto.builder()
+                            .sellerId(sellerId)
+                            .sellerName(sellerName)
+                            .totalPrice(price)
+                            .build());
+                });
+
+        List<MonthProductRankDto> top5MonthlyProductRanking = productOrderRepository.getTop5MonthlyProductRanking(date);
+
+        List<SellerProductMonthDto> sellerProductMonthDtoList = new ArrayList<>();
+        IntStream.range(0, 5)
+                .forEach(i -> {
+                    Long sellerId = null;
+                    String sellerName = null;
+                    String productId = null;
+                    String productName = null;
+                    Long totalCount = null;
+
+                    if (i < top5MonthlyProductRanking.size()) {
+                        sellerId = top5MonthlyProductRanking.get(i).getSellerId();
+                        sellerName = top5MonthlyProductRanking.get(i).getSellerName();
+                        productId = top5MonthlyProductRanking.get(i).getProductId();
+                        productName = top5MonthlyProductRanking.get(i).getProductName();
+                        totalCount = top5MonthlyProductRanking.get(i).getTotalCount();
+                    }
+
+                    sellerProductMonthDtoList.add(SellerProductMonthDto.builder()
+                            .sellerId(sellerId)
+                            .sellerName(sellerName)
+                            .productId(productId)
+                            .productName(productName)
+                            .totalCount(totalCount)
+                    .build());
+                });
+
+
+        return DashboardResponseDtoForAdmin.builder()
+                .totalSalesMonth(totalPrice)
+                .commissionMonth((long) (totalPrice * 0.05))
+                .monthSellerRank(SellerRank.builder()
+                        .one(sellerRankList.get(0))
+                        .two(sellerRankList.get(1))
+                        .three(sellerRankList.get(2))
+                        .four(sellerRankList.get(3))
+                        .five(sellerRankList.get(4))
+                .build())
+                .monthProductRank(ProductRank.builder()
+                        .one(sellerProductMonthDtoList.get(0))
+                        .two(sellerProductMonthDtoList.get(1))
+                        .three(sellerProductMonthDtoList.get(2))
+                        .four(sellerProductMonthDtoList.get(3))
+                        .five(sellerProductMonthDtoList.get(4)).build())
+                .build();
+    }
+
+    public List<Long> getConsumerOrderIdsBySellerId(long sellerId){
+        return productOrderRepository.findDistinctConsumersBySellerId(sellerId);
+    }
+
     private PaymentInfoDto getPaymentInfo(Orders orders) {
         FeignFormat<PaymentInfoDto> paymentInfo = paymentFeignServiceClient.getPaymentInfo(orders.getOrdersId());
         if(paymentInfo.getCode() != 200){
@@ -328,7 +445,7 @@ public class OrderService {
         }else if(couponCode!=null){
             topicName = KafkaTopicNameInfo.CANCEL_ORDER_COUPON;
         }else{
-            topicName = KafkaTopicNameInfo.CANCEL_ORDER_STOCK;
+            topicName = KafkaTopicNameInfo.CANCEL_ORDER_PAYMENT;
         }
         return topicName;
     }
@@ -367,4 +484,15 @@ public class OrderService {
         orderResponseInfo.setOrderStatus(getProductOrderStatusEnum(productOrder, delivery));
         orderResponseInfo.setIsAuction(orders.getIsAuction());
     }
+
+    private String convertDate(String dateString, Long days){
+        LocalDate date = LocalDate.parse(dateString, DateTimeFormatter.ofPattern("yyyyMMdd"));
+        LocalDate thirtyDaysAgo = date.minusDays(days);
+        return thirtyDaysAgo.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+    }
+
+    private String getDayOfWeek(String dateString) {
+        return LocalDate.parse(dateString, DateTimeFormatter.ISO_DATE).getDayOfWeek().name().toLowerCase();
+    }
+
 }

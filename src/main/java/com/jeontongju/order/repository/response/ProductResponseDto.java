@@ -25,11 +25,14 @@ public class ProductResponseDto {
     private String productThumbnailImageUrl;
     private Long sellerId;
     private String sellerName;
+    private Boolean isReviewAllowed;
 
     public static ProductResponseDto productOrderToProductResponseDto(ProductOrder productOrder, ProductOrderStatusEnum productOrderStatus){
+
         return ProductResponseDto.builder().productOrderId(productOrder.getProductOrderId()).productId(productOrder.getProductId())
                 .productName(productOrder.getProductName()).productCount(productOrder.getProductCount()).productPrice(productOrder.getProductPrice())
                 .productTotalAmount(productOrder.getProductCount()*productOrder.getProductPrice()).orderDate(productOrder.getOrderDate()).productOrderStatus(productOrderStatus)
-                .productThumbnailImageUrl(productOrder.getProductThumbnailImageUrl()).sellerId(productOrder.getSellerId()).sellerName(productOrder.getSellerName()).build();
+                .productThumbnailImageUrl(productOrder.getProductThumbnailImageUrl()).sellerId(productOrder.getSellerId()).sellerName(productOrder.getSellerName())
+                .isReviewAllowed( (!LocalDateTime.now().isAfter(productOrder.getOrderDate().plusDays(14))) && productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED).build();
     }
 }

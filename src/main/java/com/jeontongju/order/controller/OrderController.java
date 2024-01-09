@@ -3,13 +3,18 @@ package com.jeontongju.order.controller;
 import com.jeontongju.order.dto.DeliveryDto;
 import com.jeontongju.order.dto.OrderCancelRequestDto;
 import com.jeontongju.order.dto.ProductOrderCancelRequestDto;
+import com.jeontongju.order.dto.response.admin.DashboardResponseDtoForAdmin;
 import com.jeontongju.order.dto.response.admin.SettlementForAdmin;
 import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDto;
 import com.jeontongju.order.dto.response.consumer.ConsumerOrderListResponseDtoForAdmin;
+import com.jeontongju.order.dto.response.consumer.OrderStatusDto;
 import com.jeontongju.order.dto.response.consumer.ProductOrderConfirmResponseDto;
+import com.jeontongju.order.dto.response.seller.DashboardResponseDtoForSeller;
 import com.jeontongju.order.dto.response.seller.SellerOrderListResponseDto;
 import com.jeontongju.order.dto.response.seller.SettlementForSeller;
+import com.jeontongju.order.enums.ProductOrderStatusEnum;
 import com.jeontongju.order.exception.InvalidPermissionException;
+import com.jeontongju.order.feign.ProductFeignServiceClient;
 import com.jeontongju.order.service.OrderService;
 import io.github.bitbox.bitbox.dto.ResponseFormat;
 import io.github.bitbox.bitbox.enums.MemberRoleEnum;
@@ -37,6 +42,7 @@ import java.util.List;
 @RequestMapping("/api")
 public class OrderController {
     private final OrderService orderService;
+    private final ProductFeignServiceClient productFeignServiceClient;
 
     @GetMapping("/order/consumer")
     public ResponseEntity<ResponseFormat<ConsumerOrderListResponseDto>> getConsumerOrderList(
@@ -48,6 +54,16 @@ public class OrderController {
                 .message(HttpStatus.OK.getReasonPhrase())
                 .detail("주문 내역 조회 성공")
                 .data(orderService.getConsumerOrderList(memberId, isAuction, pageable))
+        .build());
+    }
+
+    @GetMapping("/order/status")
+    public ResponseEntity<ResponseFormat<List<OrderStatusDto>>> getConsumerStatus(){
+        return ResponseEntity.ok().body(ResponseFormat.<List<OrderStatusDto>>builder()
+                .code(HttpStatus.OK.value())
+                .message(HttpStatus.OK.getReasonPhrase())
+                .detail("주문 내역 조회 성공")
+                .data(OrderStatusDto.getOrderStatus())
         .build());
     }
 
@@ -68,26 +84,32 @@ public class OrderController {
     public ResponseEntity<ResponseFormat<SellerOrderListResponseDto>> getSellerOrderList(
             @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable,
             @RequestHeader MemberRoleEnum memberRole,
-            @RequestHeader Long memberId, @RequestParam String orderDate, @RequestParam String productId, @RequestParam boolean isDeliveryCodeNull){
+            @RequestHeader Long memberId, @RequestParam String startDate, @RequestParam String endDate,
+            @RequestParam String productId, @RequestParam String productStatus, @RequestParam boolean isDeliveryCodeNull){
         checkMemberRole(memberRole, MemberRoleEnum.ROLE_SELLER);
+        ProductOrderStatusEnum productOrderStatusEnum = null;
+        if(!productStatus.equals("null")){
+            productOrderStatusEnum = ProductOrderStatusEnum.valueOf(productStatus);
+        }
+
         return ResponseEntity.ok().body(ResponseFormat.<SellerOrderListResponseDto>builder()
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
                 .detail("주문내역 조회 완료")
-                .data(orderService.getSellerOrderList(memberId, orderDate, productId, isDeliveryCodeNull, pageable))
+                .data(orderService.getSellerOrderList(memberId, startDate, endDate , productId, productOrderStatusEnum,isDeliveryCodeNull, pageable))
         .build());
     }
 
     @GetMapping("/order/seller/{sellerId}")
     public ResponseEntity<ResponseFormat<SellerOrderListResponseDto>> getSellerOrderListForAdmin(
             @PathVariable Long sellerId, @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable,
-            @RequestHeader MemberRoleEnum memberRole, @RequestParam String orderDate, @RequestParam String productId){
+            @RequestHeader MemberRoleEnum memberRole){
         checkMemberRole(memberRole, MemberRoleEnum.ROLE_ADMIN);
         return ResponseEntity.ok().body(ResponseFormat.<SellerOrderListResponseDto>builder()
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
                 .detail("주문내역 조회 완료")
-                .data(orderService.getSellerOrderList(sellerId, orderDate, productId, false, pageable))
+                .data(orderService.getSellerOrderList(sellerId, "null", "null", "null",null,false, pageable))
         .build());
     }
 
@@ -103,7 +125,6 @@ public class OrderController {
         .build());
     }
 
-    // 내 정산 내역 조회(셀러)
     @GetMapping("/settlement/seller/year/{year}/month/{month}")
     public ResponseEntity<ResponseFormat<SettlementForSeller>> getSettlementForSeller(@PathVariable Long year, @PathVariable Long month,
                                                                                       @RequestHeader Long memberId, @RequestHeader MemberRoleEnum memberRole){
@@ -115,6 +136,31 @@ public class OrderController {
                 .data(orderService.getSettlementForSeller(memberId,year,month))
         .build());
     }
+
+    @GetMapping("/seller/dashboard")
+    public ResponseEntity<ResponseFormat<DashboardResponseDtoForSeller>> getDashboardForSeller(@RequestHeader Long memberId, @RequestHeader MemberRoleEnum memberRole, @RequestParam String date){
+        checkMemberRole(memberRole, MemberRoleEnum.ROLE_SELLER);
+
+        return ResponseEntity.ok().body(ResponseFormat.<DashboardResponseDtoForSeller>builder()
+                .code(HttpStatus.OK.value())
+                .message(HttpStatus.OK.getReasonPhrase())
+                .detail("대시보드 조회 완료")
+                .data(orderService.getDashboardForSeller(memberId,date, productFeignServiceClient.getStockUnderFive(memberId).getData()))
+        .build());
+    }
+
+    @GetMapping("/admin/dashboard")
+    public ResponseEntity<ResponseFormat<DashboardResponseDtoForAdmin>> getDashboardForAdmin(@RequestHeader MemberRoleEnum memberRole, @RequestParam String date){
+        checkMemberRole(memberRole, MemberRoleEnum.ROLE_ADMIN);
+
+        return ResponseEntity.ok().body(ResponseFormat.<DashboardResponseDtoForAdmin>builder()
+                .code(HttpStatus.OK.value())
+                .message(HttpStatus.OK.getReasonPhrase())
+                .detail("대시보드 조회 완료")
+                .data(orderService.getDashboardForAdmin(date))
+        .build());
+    }
+
 
     @PatchMapping("/delivery/{deliveryId}")
     public ResponseEntity<ResponseFormat<Void>> addDeliveryCode(@PathVariable long deliveryId, @RequestHeader MemberRoleEnum memberRole, @Valid @RequestBody DeliveryDto deliveryDto){
