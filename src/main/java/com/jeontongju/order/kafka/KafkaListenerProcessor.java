@@ -78,4 +78,9 @@ public class KafkaListenerProcessor {
     public void createAuctionOrder(OrderCancelDto orderCancelDto) {
         orderService.revertOrderStatus(orderCancelDto.getCancelOrderId(), orderCancelDto.getCancelProductOrderId());
     }
+
+    @KafkaListener(topics = KafkaTopicNameInfo.PRODUCT_ORDER_REVIEW_WRITE_STATUS_UPDATE)
+    public void updateProductOrderReviewStatus(Long productOrderId){
+        orderService.updateProductOrderReviewStatus(productOrderId);
+    }
 }

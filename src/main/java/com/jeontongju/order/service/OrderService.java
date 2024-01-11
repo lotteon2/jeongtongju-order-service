@@ -53,6 +53,7 @@ import io.github.bitbox.bitbox.dto.OrderInfoDto;
 import io.github.bitbox.bitbox.dto.PaymentInfoDto;
 import io.github.bitbox.bitbox.dto.ProductInfoDto;
 import io.github.bitbox.bitbox.dto.ProductUpdateDto;
+import io.github.bitbox.bitbox.dto.ReviewDto;
 import io.github.bitbox.bitbox.util.KafkaTopicNameInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,7 +68,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -244,6 +244,11 @@ public class OrderService {
         }
     }
 
+    @Transactional
+    public void updateProductOrderReviewStatus(Long productOrderId){
+        productOrderRepository.findById(productOrderId).orElseThrow(()->new ProductOrderIdNotFoundException("존재하지 않는 상품 번호")).changeReviewWriteFlagToTrue();
+    }
+
     public ConsumerOrderListResponseDto getConsumerOrderList(Long consumerId, Boolean isAuction, Pageable pageable){
         Page<Orders> ordersWithPage = ordersRepository.findAll(OrderSpecifications.buildConsumerOrderSpecification(consumerId, isAuction), pageable);
 
@@ -271,7 +276,7 @@ public class OrderService {
         return consumerOrderListResponseDto;
     }
 
-    public Boolean getDeliveryStatus(Long productOrderId){
+    public ReviewDto getDeliveryStatus(Long productOrderId){
         ProductOrder productOrder = productOrderRepository.findById(productOrderId).orElseThrow(() -> new RuntimeException(""));
         Orders orders = ordersRepository.findById(productOrder.getOrders().getOrdersId()).orElseThrow(()->new RuntimeException(""));
         if(orders.getIsAuction()){ throw new RuntimeException("");}
@@ -281,7 +286,8 @@ public class OrderService {
         long secondsBetween = ChronoUnit.SECONDS.between(orderDate, now);
         boolean is14DaysPassed = secondsBetween >= (14 * 24 * 60 * 60);
 
-        return productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED && !is14DaysPassed;
+        return ReviewDto.builder().reviewWriteFlag((productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED && !is14DaysPassed)
+                && !productOrder.getReviewWriteFlag()).productOrderId(productOrderId).build();
     }
 
     public SellerOrderListResponseDto getSellerOrderList(Long sellerId, String startDate, String endDate, String productId, ProductOrderStatusEnum productStatus,boolean isDeliveryCodeNull, Pageable pageable){
