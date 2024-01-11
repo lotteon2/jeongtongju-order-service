@@ -2,6 +2,7 @@ package com.jeontongju.order.controller;
 
 import com.jeontongju.order.service.OrderService;
 import io.github.bitbox.bitbox.dto.FeignFormat;
+import io.github.bitbox.bitbox.dto.ReviewDto;
 import lombok.RequiredArgsConstructor;
 import org.apache.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,8 +19,8 @@ public class OrderFeignController {
     private final OrderService orderService;
 
     @GetMapping("/product-orders/{productOrderId}/review-verify")
-    public FeignFormat<Boolean> isOrderProductConfirmed(@PathVariable long productOrderId){
-        return FeignFormat.<Boolean>builder()
+    public FeignFormat<ReviewDto> isOrderProductConfirmed(@PathVariable long productOrderId){
+        return FeignFormat.<ReviewDto>builder()
                 .code(HttpStatus.SC_OK)
                 .data(orderService.getDeliveryStatus(productOrderId))
         .build();

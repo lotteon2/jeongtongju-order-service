@@ -83,6 +83,9 @@ public class ProductOrder extends BaseEntity {
     @NotNull
     private Long consumerId;
 
+    @Column(columnDefinition = "boolean default false")
+    private Boolean reviewWriteFlag;
+
     @OneToOne(mappedBy = "productOrder", fetch = FetchType.LAZY)
     private Delivery delivery;
 
@@ -96,5 +99,6 @@ public class ProductOrder extends BaseEntity {
         this.productOrderStatus = ProductOrderStatusEnum.CANCEL;
     }
     public void changeOrderStatusToOrderStatus(){this.productOrderStatus = ProductOrderStatusEnum.ORDER;}
+    public void changeReviewWriteFlagToTrue(){this.reviewWriteFlag = true;}
 
 }
