@@ -443,9 +443,9 @@ public class OrderService {
         return productOrderRepository.findDistinctConsumersBySellerId(sellerId);
     }
 
-//    public List<AllSellerSettlementDtoForAdmin> getAllSellerSettlement(Long year, Long month){
-//        return productOrderRepository.getSettlementDataByYearAndMonth(year,month);
-//    }
+    public List<AllSellerSettlementDtoForAdmin> getAllSellerSettlement(Long year, Long month){
+        return productOrderRepository.getSettlementDataByYearAndMonth(year,month);
+    }
 
     private PaymentInfoDto getPaymentInfo(Orders orders) {
         FeignFormat<PaymentInfoDto> paymentInfo = paymentFeignServiceClient.getPaymentInfo(orders.getOrdersId());

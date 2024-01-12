@@ -1,6 +1,7 @@
 package com.jeontongju.order.repository;
 
 import com.jeontongju.order.domain.ProductOrder;
+import com.jeontongju.order.dto.response.admin.AllSellerSettlementDtoForAdmin;
 import com.jeontongju.order.repository.response.MonthProductRankDto;
 import com.jeontongju.order.repository.response.MonthSellerRankDto;
 import com.jeontongju.order.repository.response.OrderStatusDtoForDashboard;
@@ -94,4 +95,12 @@ public interface ProductOrderRepository extends JpaRepository<ProductOrder, Long
             "GROUP BY product_id, seller_id, product_name, seller_name " +
             "ORDER BY productRank LIMIT 5", nativeQuery = true)
     LinkedList<MonthProductRankDto> getTop5MonthlyProductRanking(String orderDate);
+
+    @Query("SELECT " +
+            "new com.jeontongju.order.dto.response.admin.AllSellerSettlementDtoForAdmin(" +
+            "s.sellerId, s.sellerName, s.settlementYear, s.settlementMonth, s.settlementAmount, s.settlementCommission) " +
+            "FROM Settlement s " +
+            "WHERE s.settlementYear = :year AND s.settlementMonth = :month"
+    )
+    List<AllSellerSettlementDtoForAdmin> getSettlementDataByYearAndMonth(Long year, Long month);
 }

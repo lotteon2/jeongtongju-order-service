@@ -16,6 +16,7 @@ import com.jeontongju.order.enums.ProductOrderStatusEnum;
 import com.jeontongju.order.exception.InvalidPermissionException;
 import com.jeontongju.order.feign.ProductFeignServiceClient;
 import com.jeontongju.order.service.OrderService;
+import com.jeontongju.order.util.ExcelWriterUtil;
 import io.github.bitbox.bitbox.dto.ResponseFormat;
 import io.github.bitbox.bitbox.enums.MemberRoleEnum;
 import lombok.RequiredArgsConstructor;
@@ -161,6 +162,15 @@ public class OrderController {
         .build());
     }
 
+    @GetMapping("/all-seller-settlement")
+    public ResponseEntity<ResponseFormat<Void>> downloadSettlementFile(@RequestParam Long year, @RequestParam Long month){
+        ExcelWriterUtil.createExcelFile(orderService.getAllSellerSettlement(year,month));
+        return ResponseEntity.ok().body(ResponseFormat.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message(HttpStatus.OK.getReasonPhrase())
+                .detail("정산 파일 다운로드 완료")
+        .build());
+    }
 
     @PatchMapping("/delivery/{deliveryId}")
     public ResponseEntity<ResponseFormat<Void>> addDeliveryCode(@PathVariable long deliveryId, @RequestHeader MemberRoleEnum memberRole, @Valid @RequestBody DeliveryDto deliveryDto){
