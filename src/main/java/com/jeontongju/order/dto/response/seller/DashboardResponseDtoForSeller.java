@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,11 +21,5 @@ public class DashboardResponseDtoForSeller {
     private Long monthSettlement;
     private Long stockUnderFive;
     private Long trackingNumberNotEntered;
-    private Long monday;
-    private Long tuesday;
-    private Long wednesday;
-    private Long thursday;
-    private Long friday;
-    private Long saturday;
-    private Long sunday;
+    private List<WeeklySales> weeklySales;
 }
