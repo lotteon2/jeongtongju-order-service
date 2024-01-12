@@ -3,6 +3,7 @@ package com.jeontongju.order.service;
 import com.jeontongju.order.domain.Delivery;
 import com.jeontongju.order.domain.Orders;
 import com.jeontongju.order.domain.ProductOrder;
+import com.jeontongju.order.dto.response.admin.AllSellerSettlementDtoForAdmin;
 import com.jeontongju.order.dto.response.admin.DashboardResponseDtoForAdmin;
 import com.jeontongju.order.dto.response.admin.ProductRank;
 import com.jeontongju.order.dto.response.admin.SellerProductMonthDto;
@@ -19,6 +20,7 @@ import com.jeontongju.order.dto.response.seller.DashboardResponseDtoForSeller;
 import com.jeontongju.order.dto.response.seller.SellerOrderListDto;
 import com.jeontongju.order.dto.response.seller.SellerOrderListResponseDto;
 import com.jeontongju.order.dto.response.seller.SettlementForSeller;
+import com.jeontongju.order.dto.response.seller.WeeklySales;
 import com.jeontongju.order.enums.ProductOrderStatusEnum;
 import com.jeontongju.order.exception.CancelProductOrderException;
 import com.jeontongju.order.exception.DeliveryIdNotFoundException;
@@ -350,12 +352,19 @@ public class OrderService {
             week.put(getDayOfWeek(weeklySalesDto.getOrderDay()), weeklySalesDto.getTotalAmount());
         }
 
+        List<WeeklySales> weeklySalesList = new ArrayList<>();
+        weeklySalesList.add(WeeklySales.builder().num(week.get("monday")).name("월").build());
+        weeklySalesList.add(WeeklySales.builder().num(week.get("tuesday")).name("화").build());
+        weeklySalesList.add(WeeklySales.builder().num(week.get("wednesday")).name("수").build());
+        weeklySalesList.add(WeeklySales.builder().num(week.get("thursday")).name("목").build());
+        weeklySalesList.add(WeeklySales.builder().num(week.get("friday")).name("금").build());
+        weeklySalesList.add(WeeklySales.builder().num(week.get("saturday")).name("토").build());
+        weeklySalesList.add(WeeklySales.builder().num(week.get("sunday")).name("일").build());
+
         return DashboardResponseDtoForSeller.builder().order(orderStatsInDateRange.getOrdered()).shipping(orderStatsInDateRange.getShipping())
                 .completed(orderStatsInDateRange.getCompleted()).confirmed(orderStatsInDateRange.getConfirmed()).cancel(orderStatsInDateRange.getCancel())
                 .monthSales(monthSales).monthSettlement(monthSettlement).stockUnderFive(stockUnderFive).trackingNumberNotEntered(trackingNumberNotEntered)
-                .monday(week.get("monday")).tuesday(week.get("tuesday")).wednesday(week.get("wednesday")).thursday(week.get("thursday"))
-                .friday(week.get("friday")).saturday(week.get("saturday")).sunday(week.get("sunday"))
-        .build();
+                .weeklySales(weeklySalesList).build();
     }
 
     public DashboardResponseDtoForAdmin getDashboardForAdmin(String date){
@@ -433,6 +442,10 @@ public class OrderService {
     public List<Long> getConsumerOrderIdsBySellerId(long sellerId){
         return productOrderRepository.findDistinctConsumersBySellerId(sellerId);
     }
+
+//    public List<AllSellerSettlementDtoForAdmin> getAllSellerSettlement(Long year, Long month){
+//        return productOrderRepository.getSettlementDataByYearAndMonth(year,month);
+//    }
 
     private PaymentInfoDto getPaymentInfo(Orders orders) {
         FeignFormat<PaymentInfoDto> paymentInfo = paymentFeignServiceClient.getPaymentInfo(orders.getOrdersId());
