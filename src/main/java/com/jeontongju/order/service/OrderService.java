@@ -415,7 +415,7 @@ public class OrderService {
 
         return DashboardResponseDtoForAdmin.builder()
                 .totalSalesMonth(totalPrice)
-                .commissionMonth((long) (totalPrice * 0.05))
+                .commissionMonth((long) (totalPrice * 0.10))
                 .monthSellerRank(SellerRank.builder()
                         .one(sellerRankList.get(0))
                         .two(sellerRankList.get(1))
