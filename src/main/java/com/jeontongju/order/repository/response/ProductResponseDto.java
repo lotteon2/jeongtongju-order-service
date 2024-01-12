@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,11 +29,17 @@ public class ProductResponseDto {
     private Boolean isReviewAllowed;
 
     public static ProductResponseDto productOrderToProductResponseDto(ProductOrder productOrder, ProductOrderStatusEnum productOrderStatus){
+        LocalDateTime orderDate = productOrder.getOrderDate();
+        LocalDateTime now = LocalDateTime.now();
+        long secondsBetween = ChronoUnit.SECONDS.between(orderDate, now);
+        boolean is14DaysPassed = secondsBetween >= (14 * 24 * 60 * 60);
+
 
         return ProductResponseDto.builder().productOrderId(productOrder.getProductOrderId()).productId(productOrder.getProductId())
                 .productName(productOrder.getProductName()).productCount(productOrder.getProductCount()).productPrice(productOrder.getProductPrice())
                 .productTotalAmount(productOrder.getProductCount()*productOrder.getProductPrice()).orderDate(productOrder.getOrderDate()).productOrderStatus(productOrderStatus)
                 .productThumbnailImageUrl(productOrder.getProductThumbnailImageUrl()).sellerId(productOrder.getSellerId()).sellerName(productOrder.getSellerName())
-                .isReviewAllowed( productOrder.getReviewWriteFlag() ).build();
+                .isReviewAllowed( (productOrderStatus == ProductOrderStatusEnum.CONFIRMED && !is14DaysPassed)
+                && !productOrder.getReviewWriteFlag() ).build();
     }
 }
