@@ -342,7 +342,7 @@ public class OrderService {
         Long trackingNumberNotEntered = productOrderRepository.countNullDeliveryCodesBySellerId(sellerId);
 
         Long monthSales = productOrderRepository.sumOrderTotalPriceByMonth(date.substring(0,6), sellerId);
-        Long monthSettlement = (long) (monthSales*0.95);
+        Long monthSettlement = (long) (monthSales*0.90);
 
         Map<String, Long> week = new HashMap<>();
         week.put("monday",0L);week.put("tuesday",0L);week.put("wednesday",0L);week.put("thursday",0L);
