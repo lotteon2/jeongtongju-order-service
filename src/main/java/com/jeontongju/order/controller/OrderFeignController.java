@@ -2,7 +2,6 @@ package com.jeontongju.order.controller;
 
 import com.jeontongju.order.service.OrderService;
 import io.github.bitbox.bitbox.dto.FeignFormat;
-import io.github.bitbox.bitbox.dto.ReviewDto;
 import lombok.RequiredArgsConstructor;
 import org.apache.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
