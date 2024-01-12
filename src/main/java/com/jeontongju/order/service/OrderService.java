@@ -53,7 +53,6 @@ import io.github.bitbox.bitbox.dto.OrderInfoDto;
 import io.github.bitbox.bitbox.dto.PaymentInfoDto;
 import io.github.bitbox.bitbox.dto.ProductInfoDto;
 import io.github.bitbox.bitbox.dto.ProductUpdateDto;
-import io.github.bitbox.bitbox.dto.ReviewDto;
 import io.github.bitbox.bitbox.util.KafkaTopicNameInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -276,7 +275,7 @@ public class OrderService {
         return consumerOrderListResponseDto;
     }
 
-    public ReviewDto getDeliveryStatus(Long productOrderId){
+    public Boolean getDeliveryStatus(Long productOrderId){
         ProductOrder productOrder = productOrderRepository.findById(productOrderId).orElseThrow(() -> new RuntimeException(""));
         Orders orders = ordersRepository.findById(productOrder.getOrders().getOrdersId()).orElseThrow(()->new RuntimeException(""));
         if(orders.getIsAuction()){ throw new RuntimeException("");}
@@ -286,8 +285,7 @@ public class OrderService {
         long secondsBetween = ChronoUnit.SECONDS.between(orderDate, now);
         boolean is14DaysPassed = secondsBetween >= (14 * 24 * 60 * 60);
 
-        return ReviewDto.builder().reviewWriteFlag((productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED && !is14DaysPassed)
-                && !productOrder.getReviewWriteFlag()).productOrderId(productOrderId).build();
+        return (productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED && !is14DaysPassed) && !productOrder.getReviewWriteFlag();
     }
 
     public SellerOrderListResponseDto getSellerOrderList(Long sellerId, String startDate, String endDate, String productId, ProductOrderStatusEnum productStatus,boolean isDeliveryCodeNull, Pageable pageable){

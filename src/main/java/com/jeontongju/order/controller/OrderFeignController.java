@@ -19,8 +19,8 @@ public class OrderFeignController {
     private final OrderService orderService;
 
     @GetMapping("/product-orders/{productOrderId}/review-verify")
-    public FeignFormat<ReviewDto> isOrderProductConfirmed(@PathVariable long productOrderId){
-        return FeignFormat.<ReviewDto>builder()
+    public FeignFormat<Boolean> isOrderProductConfirmed(@PathVariable long productOrderId){
+        return FeignFormat.<Boolean>builder()
                 .code(HttpStatus.SC_OK)
                 .data(orderService.getDeliveryStatus(productOrderId))
         .build();
