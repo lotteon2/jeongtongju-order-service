@@ -10,6 +10,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 @Slf4j
@@ -25,7 +27,8 @@ public class ExcelWriterUtil {
             createHeaderRow(sheet);
             createDataRows(sheet, allSellerSettlementDtoForAdminList);
 
-            String filePath = getDownloadsPath() + FILE_SEPARATOR + "settlement.xlsx";
+            String fileName = "settlement_" + getCurrentTimestamp() + ".xlsx";
+            String filePath = getDownloadsPath() + FILE_SEPARATOR + fileName;
 
             try (FileOutputStream fileOut = new FileOutputStream(filePath)) {
                 workbook.write(fileOut);
@@ -64,5 +67,10 @@ public class ExcelWriterUtil {
 
     private static String getDownloadsPath() {
         return System.getProperty("user.home") + FILE_SEPARATOR + "Downloads";
+    }
+
+    private static String getCurrentTimestamp() {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
+        return dateFormat.format(new Date());
     }
 }
