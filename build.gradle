@@ -31,7 +31,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.cloud:spring-cloud-starter-bus-kafka'
 	implementation group: 'org.springframework.cloud', name: 'spring-cloud-starter-openfeign'
-	implementation group: 'io.github.lotteon2', name: 'bitbox', version: '1.4.3'
+	implementation group: 'io.github.lotteon2', name: 'bitbox', version: '1.4.4'
 	implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j'
 	implementation group: 'org.apache.poi', name: 'poi', version: '5.0.0'
 	implementation group: 'org.apache.poi', name: 'poi-ooxml', version: '5.0.0'
