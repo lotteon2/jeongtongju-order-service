@@ -29,6 +29,7 @@ public class ProductResponseDto {
     private String sellerName;
     private Boolean isReviewAllowed;
     private Boolean isConfirmAllowed;
+    private Boolean isAuction;
 
     public static ProductResponseDto productOrderToProductResponseDto(Orders orders, ProductOrder productOrder, ProductOrderStatusEnum productOrderStatus){
         LocalDateTime orderDate = productOrder.getOrderDate();
@@ -42,6 +43,7 @@ public class ProductResponseDto {
                 .productTotalAmount(productOrder.getProductCount()*productOrder.getProductPrice()).orderDate(productOrder.getOrderDate()).productOrderStatus(productOrderStatus)
                 .productThumbnailImageUrl(productOrder.getProductThumbnailImageUrl()).sellerId(productOrder.getSellerId()).sellerName(productOrder.getSellerName())
                 .isReviewAllowed( (productOrderStatus == ProductOrderStatusEnum.CONFIRMED && !is14DaysPassed)
-                && !productOrder.getReviewWriteFlag() && !orders.getIsAuction() ).isConfirmAllowed(!orders.getIsAuction()).build();
+                && !productOrder.getReviewWriteFlag() && !orders.getIsAuction() ).isConfirmAllowed(!orders.getIsAuction())
+                .isAuction(orders.getIsAuction()).build();
     }
 }
