@@ -47,7 +47,7 @@ public class KafkaListenerProcessor {
                     .build());
         }
 
-        if(orderInfoDto.getOrderCreationDto().isCart()) {
+        if(orderInfoDto.getOrderCreationDto().getCart()) {
             // 장바구니 지우는 카프카를 보낸다
             cartDeleteKafkaProcessor.send(KafkaTopicNameInfo.DELETE_CART, CartDeleteListDto.builder()
                     .cartDeleteDtoList(orderInfoDto.getOrderCreationDto().getProductInfoDtoList().stream().map(productInfoDto -> CartDeleteDto.builder()
