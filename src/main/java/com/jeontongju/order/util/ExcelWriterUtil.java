@@ -1,7 +1,7 @@
 package com.jeontongju.order.util;
 
 import com.jeontongju.order.dto.response.admin.AllSellerSettlementDtoForAdmin;
-import org.apache.poi.ss.usermodel.Cell;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -12,45 +12,57 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 
+@Slf4j
 public class ExcelWriterUtil {
+
+    private static final String FILE_SEPARATOR = File.separator;
+    private static final String SHEET_NAME = "Sheet1";
+
     public static void createExcelFile(List<AllSellerSettlementDtoForAdmin> allSellerSettlementDtoForAdminList) {
-        for(AllSellerSettlementDtoForAdmin allSellerSettlementDtoForAdmin : allSellerSettlementDtoForAdminList){
-            System.out.println(allSellerSettlementDtoForAdmin.getSellerId());
-        }
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet(SHEET_NAME);
 
-        try {
-            // 엑셀 워크북 생성
-            Workbook workbook = new XSSFWorkbook();
+            createHeaderRow(sheet);
+            createDataRows(sheet, allSellerSettlementDtoForAdminList);
 
-            // 시트 생성
-            Sheet sheet = workbook.createSheet("Sheet1");
+            String filePath = getDownloadsPath() + FILE_SEPARATOR + "settlement.xlsx";
 
-            // 행 및 셀 생성 및 값 설정
-            Row row = sheet.createRow(0);
-            Cell cell = row.createCell(0);
-            cell.setCellValue("Hello");
-
-            // 다른 행에 값 추가 예시
-            Row row2 = sheet.createRow(1);
-            Cell cell2 = row2.createCell(1);
-            cell2.setCellValue("World");
-
-            // 파일 경로 설정 (사용자의 다운로드 폴더)
-            String filePath = getDownloadsPath() + File.separator + "settlement.xlsx";
-
-            // 파일로 저장
             try (FileOutputStream fileOut = new FileOutputStream(filePath)) {
                 workbook.write(fileOut);
             }
 
-            // 메모리에서 닫음
-            workbook.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("액셀 파일 만드는데 문제가 발생했습니다.", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void createHeaderRow(Sheet sheet) {
+        Row headerRow = sheet.createRow(0);
+        headerRow.createCell(0).setCellValue("셀러아이디");
+        headerRow.createCell(1).setCellValue("셀러명");
+        headerRow.createCell(2).setCellValue("정산년");
+        headerRow.createCell(3).setCellValue("정산월");
+        headerRow.createCell(4).setCellValue("총금액");
+        headerRow.createCell(5).setCellValue("수수료");
+        headerRow.createCell(6).setCellValue("판매액");
+    }
+
+    private static void createDataRows(Sheet sheet, List<AllSellerSettlementDtoForAdmin> dataList) {
+        int rowNum = 1;
+        for (AllSellerSettlementDtoForAdmin dto : dataList) {
+            Row dataRow = sheet.createRow(rowNum++);
+            dataRow.createCell(0).setCellValue(dto.getSellerId());
+            dataRow.createCell(1).setCellValue(dto.getSellerName());
+            dataRow.createCell(2).setCellValue(dto.getSettlementYear());
+            dataRow.createCell(3).setCellValue(dto.getSettlementMonth());
+            dataRow.createCell(4).setCellValue(dto.getSettlementAmount());
+            dataRow.createCell(5).setCellValue(dto.getSettlementCommission());
+            dataRow.createCell(6).setCellValue(dto.getSettlementAmount() - dto.getSettlementCommission());
         }
     }
 
     private static String getDownloadsPath() {
-        return System.getProperty("user.home") + File.separator + "Downloads";
+        return System.getProperty("user.home") + FILE_SEPARATOR + "Downloads";
     }
 }
