@@ -1,5 +1,6 @@
 package com.jeontongju.order.repository.response;
 
+import com.jeontongju.order.domain.Orders;
 import com.jeontongju.order.domain.ProductOrder;
 import com.jeontongju.order.enums.ProductOrderStatusEnum;
 import lombok.AllArgsConstructor;
@@ -27,8 +28,10 @@ public class ProductResponseDto {
     private Long sellerId;
     private String sellerName;
     private Boolean isReviewAllowed;
+    private Boolean isConfirmAllowed;
+    private Boolean isAuction;
 
-    public static ProductResponseDto productOrderToProductResponseDto(ProductOrder productOrder, ProductOrderStatusEnum productOrderStatus){
+    public static ProductResponseDto productOrderToProductResponseDto(Orders orders, ProductOrder productOrder, ProductOrderStatusEnum productOrderStatus){
         LocalDateTime orderDate = productOrder.getOrderDate();
         LocalDateTime now = LocalDateTime.now();
         long secondsBetween = ChronoUnit.SECONDS.between(orderDate, now);
@@ -40,6 +43,7 @@ public class ProductResponseDto {
                 .productTotalAmount(productOrder.getProductCount()*productOrder.getProductPrice()).orderDate(productOrder.getOrderDate()).productOrderStatus(productOrderStatus)
                 .productThumbnailImageUrl(productOrder.getProductThumbnailImageUrl()).sellerId(productOrder.getSellerId()).sellerName(productOrder.getSellerName())
                 .isReviewAllowed( (productOrderStatus == ProductOrderStatusEnum.CONFIRMED && !is14DaysPassed)
-                && !productOrder.getReviewWriteFlag() ).build();
+                && !productOrder.getReviewWriteFlag() && !orders.getIsAuction() ).isConfirmAllowed(!orders.getIsAuction())
+                .isAuction(orders.getIsAuction()).build();
     }
 }
