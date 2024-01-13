@@ -22,6 +22,7 @@ import com.jeontongju.order.dto.response.seller.SellerOrderListResponseDto;
 import com.jeontongju.order.dto.response.seller.SettlementForSeller;
 import com.jeontongju.order.dto.response.seller.WeeklySales;
 import com.jeontongju.order.enums.ProductOrderStatusEnum;
+import com.jeontongju.order.exception.AuctionStatusException;
 import com.jeontongju.order.exception.CancelProductOrderException;
 import com.jeontongju.order.exception.DeliveryIdNotFoundException;
 import com.jeontongju.order.exception.DeliveryStatusException;
@@ -152,6 +153,7 @@ public class OrderService {
     @Transactional
     public long confirmProductOrder(Long productOrderId){
         ProductOrder productOrder = productOrderRepository.findById(productOrderId).orElseThrow(() -> new ProductOrderIdNotFoundException("해당 상품코드가 존재하지 않습니다."));
+        if(productOrder.getOrders().getIsAuction()) { throw new AuctionStatusException("옥션 상품은 구매확정 할 수 없습니다."); }
         if(getDelivery(productOrder.getDelivery().getDeliveryId()).getDeliveryStatus() != ProductOrderStatusEnum.COMPLETED ||
                 productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED ){ throw new DeliveryStatusException("구매 확정은 배송완료 상품에 대해서만 가능합니다."); }
         productOrder.changeOrderStatusToConfirmStatus();
@@ -287,7 +289,7 @@ public class OrderService {
         long secondsBetween = ChronoUnit.SECONDS.between(orderDate, now);
         boolean is14DaysPassed = secondsBetween >= (14 * 24 * 60 * 60);
 
-        return (productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED && !is14DaysPassed) && !productOrder.getReviewWriteFlag();
+        return (productOrder.getProductOrderStatus() == ProductOrderStatusEnum.CONFIRMED && !is14DaysPassed) && !productOrder.getReviewWriteFlag() && !orders.getIsAuction();
     }
 
     public SellerOrderListResponseDto getSellerOrderList(Long sellerId, String startDate, String endDate, String productId, ProductOrderStatusEnum productStatus,boolean isDeliveryCodeNull, Pageable pageable){
