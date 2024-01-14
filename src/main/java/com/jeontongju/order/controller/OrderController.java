@@ -44,6 +44,7 @@ import java.util.List;
 public class OrderController {
     private final OrderService orderService;
     private final ProductFeignServiceClient productFeignServiceClient;
+    private final ExcelWriterUtil excelWriterUtil;
 
     @GetMapping("/order/consumer")
     public ResponseEntity<ResponseFormat<ConsumerOrderListResponseDto>> getConsumerOrderList(
@@ -163,8 +164,13 @@ public class OrderController {
     }
 
     @GetMapping("/all-seller-settlement")
-    public ResponseEntity<byte[]> downloadSettlementFile(@RequestParam Long year, @RequestParam Long month){
-        return ExcelWriterUtil.createExcelFileResponse(orderService.getAllSellerSettlement(year,month));
+    public ResponseEntity<ResponseFormat<String>> downloadSettlementFile(@RequestParam Long year, @RequestParam Long month){
+        return ResponseEntity.ok().body(ResponseFormat.<String>builder()
+                .code(HttpStatus.OK.value())
+                .message(HttpStatus.OK.getReasonPhrase())
+                .detail("모든 셀러 정산내역 액셀 다운로드 성공")
+                .data(excelWriterUtil.createExcelFileResponse(orderService.getAllSellerSettlement(year,month)))
+        .build());
     }
 
     @PatchMapping("/delivery/{deliveryId}")
