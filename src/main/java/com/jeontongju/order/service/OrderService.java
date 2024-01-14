@@ -355,7 +355,7 @@ public class OrderService {
             week.put(getDayOfWeek(weeklySalesDto.getOrderDay()), weeklySalesDto.getTotalAmount());
         }
 
-        List<WeeklySales> weeklySalesList = new ArrayList<>();
+        List<WeeklySales> weeklySalesList = new LinkedList<>();
         weeklySalesList.add(WeeklySales.builder().num(week.get("monday")).name("월").build());
         weeklySalesList.add(WeeklySales.builder().num(week.get("tuesday")).name("화").build());
         weeklySalesList.add(WeeklySales.builder().num(week.get("wednesday")).name("수").build());
@@ -424,18 +424,16 @@ public class OrderService {
 
 
         List<SellerRankMonthDto> sellerRankMonthDtoLinkedList = new LinkedList<>();
-        sellerRankMonthDtoLinkedList.add(sellerRankList.get(0));
-        sellerRankMonthDtoLinkedList.add(sellerRankList.get(1));
-        sellerRankMonthDtoLinkedList.add(sellerRankList.get(2));
-        sellerRankMonthDtoLinkedList.add(sellerRankList.get(3));
-        sellerRankMonthDtoLinkedList.add(sellerRankList.get(4));
-        List<SellerProductMonthDto> sellerProductMonthDtoLinkedList = new LinkedList<>();
-        sellerProductMonthDtoLinkedList.add(sellerProductMonthDtoList.get(0));
-        sellerProductMonthDtoLinkedList.add(sellerProductMonthDtoList.get(1));
-        sellerProductMonthDtoLinkedList.add(sellerProductMonthDtoList.get(2));
-        sellerProductMonthDtoLinkedList.add(sellerProductMonthDtoList.get(3));
-        sellerProductMonthDtoLinkedList.add(sellerProductMonthDtoList.get(4));
+        for(SellerRankMonthDto sellerRankMonthDto : sellerRankList){
+            if(sellerRankMonthDto.getSellerId()==null) break;
+            sellerRankMonthDtoLinkedList.add(sellerRankMonthDto);
+        }
 
+        List<SellerProductMonthDto> sellerProductMonthDtoLinkedList = new LinkedList<>();
+        for(SellerProductMonthDto sellerProductMonthDto : sellerProductMonthDtoList){
+            if(sellerProductMonthDto.getSellerId()==null) break;
+            sellerProductMonthDtoLinkedList.add(sellerProductMonthDto);
+        }
 
         return DashboardResponseDtoForAdmin.builder()
                 .totalSalesMonth(totalPrice)
