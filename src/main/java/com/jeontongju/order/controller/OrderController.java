@@ -163,13 +163,8 @@ public class OrderController {
     }
 
     @GetMapping("/all-seller-settlement")
-    public ResponseEntity<ResponseFormat<Void>> downloadSettlementFile(@RequestParam Long year, @RequestParam Long month){
-        ExcelWriterUtil.createExcelFile(orderService.getAllSellerSettlement(year,month));
-        return ResponseEntity.ok().body(ResponseFormat.<Void>builder()
-                .code(HttpStatus.OK.value())
-                .message(HttpStatus.OK.getReasonPhrase())
-                .detail("정산 파일 다운로드 완료")
-        .build());
+    public ResponseEntity<byte[]> downloadSettlementFile(@RequestParam Long year, @RequestParam Long month){
+        return ExcelWriterUtil.createExcelFileResponse(orderService.getAllSellerSettlement(year,month));
     }
 
     @PatchMapping("/delivery/{deliveryId}")
