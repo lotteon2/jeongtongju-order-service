@@ -6,9 +6,11 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
-import java.io.File;
-import java.io.FileOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -17,22 +19,25 @@ import java.util.List;
 @Slf4j
 public class ExcelWriterUtil {
 
-    private static final String FILE_SEPARATOR = File.separator;
     private static final String SHEET_NAME = "Sheet1";
 
-    public static void createExcelFile(List<AllSellerSettlementDtoForAdmin> allSellerSettlementDtoForAdminList) {
+    public static ResponseEntity<byte[]> createExcelFileResponse(List<AllSellerSettlementDtoForAdmin> allSellerSettlementDtoForAdminList) {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet(SHEET_NAME);
 
             createHeaderRow(sheet);
             createDataRows(sheet, allSellerSettlementDtoForAdminList);
 
-            String fileName = "settlement_" + getCurrentTimestamp() + ".xlsx";
-            String filePath = getDownloadsPath() + FILE_SEPARATOR + fileName;
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            workbook.write(outputStream);
 
-            try (FileOutputStream fileOut = new FileOutputStream(filePath)) {
-                workbook.write(fileOut);
-            }
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment", "settlement_" + getCurrentTimestamp() + ".xlsx");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+            .body(outputStream.toByteArray());
 
         } catch (IOException e) {
             log.error("액셀 파일 만드는데 문제가 발생했습니다.", e);
@@ -63,10 +68,6 @@ public class ExcelWriterUtil {
             dataRow.createCell(5).setCellValue(dto.getSettlementCommission());
             dataRow.createCell(6).setCellValue(dto.getSettlementAmount() - dto.getSettlementCommission());
         }
-    }
-
-    private static String getDownloadsPath() {
-        return System.getProperty("user.home") + FILE_SEPARATOR + "Downloads";
     }
 
     private static String getCurrentTimestamp() {
