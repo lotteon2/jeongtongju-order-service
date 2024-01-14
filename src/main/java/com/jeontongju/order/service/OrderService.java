@@ -423,13 +423,13 @@ public class OrderService {
                 });
 
 
-        LinkedList<SellerRankMonthDto> sellerRankMonthDtoLinkedList = new LinkedList<>();
+        List<SellerRankMonthDto> sellerRankMonthDtoLinkedList = new LinkedList<>();
         sellerRankMonthDtoLinkedList.add(sellerRankList.get(0));
         sellerRankMonthDtoLinkedList.add(sellerRankList.get(1));
         sellerRankMonthDtoLinkedList.add(sellerRankList.get(2));
         sellerRankMonthDtoLinkedList.add(sellerRankList.get(3));
         sellerRankMonthDtoLinkedList.add(sellerRankList.get(4));
-        LinkedList<SellerProductMonthDto> sellerProductMonthDtoLinkedList = new LinkedList<>();
+        List<SellerProductMonthDto> sellerProductMonthDtoLinkedList = new LinkedList<>();
         sellerProductMonthDtoLinkedList.add(sellerProductMonthDtoList.get(0));
         sellerProductMonthDtoLinkedList.add(sellerProductMonthDtoList.get(1));
         sellerProductMonthDtoLinkedList.add(sellerProductMonthDtoList.get(2));
