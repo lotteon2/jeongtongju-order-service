@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -12,6 +14,6 @@ import lombok.NoArgsConstructor;
 public class DashboardResponseDtoForAdmin {
     private Long totalSalesMonth;
     private Long commissionMonth;
-    private SellerRank monthSellerRank;
-    private ProductRank monthProductRank;
+    private List<SellerRankMonthDto> monthSellerRank;
+    private List<SellerProductMonthDto> monthProductRank;
 }

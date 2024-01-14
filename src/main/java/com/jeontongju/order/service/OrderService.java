@@ -70,6 +70,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -366,14 +367,14 @@ public class OrderService {
         return DashboardResponseDtoForSeller.builder().order(orderStatsInDateRange.getOrdered()).shipping(orderStatsInDateRange.getShipping())
                 .completed(orderStatsInDateRange.getCompleted()).confirmed(orderStatsInDateRange.getConfirmed()).cancel(orderStatsInDateRange.getCancel())
                 .monthSales(monthSales).monthSettlement(monthSettlement).stockUnderFive(stockUnderFive).trackingNumberNotEntered(trackingNumberNotEntered)
-                .weeklySales(weeklySalesList).build();
+        .weeklySales(weeklySalesList).build();
     }
 
     public DashboardResponseDtoForAdmin getDashboardForAdmin(String date){
         Long totalPrice = productOrderRepository.sumOrderTotalPriceByMonthExternal(date);
         List<MonthSellerRankDto> monthlySellerRanking = productOrderRepository.getTop5MonthlySellerRanking(date);
 
-        List<SellerRankMonthDto> sellerRankList = new ArrayList<>();
+        List<SellerRankMonthDto> sellerRankList = new LinkedList<>();
         IntStream.range(0, 5)
                 .forEach(i -> {
                     Long sellerId = null;
@@ -395,7 +396,7 @@ public class OrderService {
 
         List<MonthProductRankDto> top5MonthlyProductRanking = productOrderRepository.getTop5MonthlyProductRanking(date);
 
-        List<SellerProductMonthDto> sellerProductMonthDtoList = new ArrayList<>();
+        List<SellerProductMonthDto> sellerProductMonthDtoList = new LinkedList<>();
         IntStream.range(0, 5)
                 .forEach(i -> {
                     Long sellerId = null;
@@ -422,23 +423,26 @@ public class OrderService {
                 });
 
 
+        LinkedList<SellerRankMonthDto> sellerRankMonthDtoLinkedList = new LinkedList<>();
+        sellerRankMonthDtoLinkedList.add(sellerRankList.get(0));
+        sellerRankMonthDtoLinkedList.add(sellerRankList.get(1));
+        sellerRankMonthDtoLinkedList.add(sellerRankList.get(2));
+        sellerRankMonthDtoLinkedList.add(sellerRankList.get(3));
+        sellerRankMonthDtoLinkedList.add(sellerRankList.get(4));
+        LinkedList<SellerProductMonthDto> sellerProductMonthDtoLinkedList = new LinkedList<>();
+        sellerProductMonthDtoLinkedList.add(sellerProductMonthDtoList.get(0));
+        sellerProductMonthDtoLinkedList.add(sellerProductMonthDtoList.get(1));
+        sellerProductMonthDtoLinkedList.add(sellerProductMonthDtoList.get(2));
+        sellerProductMonthDtoLinkedList.add(sellerProductMonthDtoList.get(3));
+        sellerProductMonthDtoLinkedList.add(sellerProductMonthDtoList.get(4));
+
+
         return DashboardResponseDtoForAdmin.builder()
                 .totalSalesMonth(totalPrice)
                 .commissionMonth((long) (totalPrice * 0.10))
-                .monthSellerRank(SellerRank.builder()
-                        .one(sellerRankList.get(0))
-                        .two(sellerRankList.get(1))
-                        .three(sellerRankList.get(2))
-                        .four(sellerRankList.get(3))
-                        .five(sellerRankList.get(4))
-                .build())
-                .monthProductRank(ProductRank.builder()
-                        .one(sellerProductMonthDtoList.get(0))
-                        .two(sellerProductMonthDtoList.get(1))
-                        .three(sellerProductMonthDtoList.get(2))
-                        .four(sellerProductMonthDtoList.get(3))
-                        .five(sellerProductMonthDtoList.get(4)).build())
-                .build();
+                .monthSellerRank(sellerRankMonthDtoLinkedList)
+                .monthProductRank(sellerProductMonthDtoLinkedList)
+        .build();
     }
 
     public List<Long> getConsumerOrderIdsBySellerId(long sellerId){
