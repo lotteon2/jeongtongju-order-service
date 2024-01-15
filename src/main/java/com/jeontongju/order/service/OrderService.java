@@ -452,10 +452,15 @@ public class OrderService {
     }
 
     private PaymentInfoDto getPaymentInfo(Orders orders) {
+        if(orders.getIsAuction()){
+            return PaymentInfoDto.builder().minusPointAmount(0L).minusCouponAmount(0L).couponCode(null).totalPrice(orders.getTotalPrice()).realPrice(orders.getTotalPrice()).build();
+        }
+
         FeignFormat<PaymentInfoDto> paymentInfo = paymentFeignServiceClient.getPaymentInfo(orders.getOrdersId());
         if(paymentInfo.getCode() != 200){
             throw new FeignServerNotAvailableException("결제 서버에서 예외가 발생했습니다.");
         }
+
         return paymentInfo.getData();
     }
 
