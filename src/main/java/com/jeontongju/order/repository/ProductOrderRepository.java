@@ -99,7 +99,7 @@ public interface ProductOrderRepository extends JpaRepository<ProductOrder, Long
 
     @Query("SELECT " +
             "new com.jeontongju.order.dto.response.admin.AllSellerSettlementDtoForAdmin(" +
-            "s.sellerId, s.sellerName, s.settlementYear, s.settlementMonth, s.settlementAmount, s.settlementCommission) " +
+            "s.sellerId, s.sellerName, s.settlementYear, s.settlementMonth, s.totalAmount, s.settlementCommission) " +
             "FROM Settlement s " +
             "WHERE s.settlementYear = :year AND s.settlementMonth = :month"
     )
