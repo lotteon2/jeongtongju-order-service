@@ -37,22 +37,24 @@ public interface ProductOrderRepository extends JpaRepository<ProductOrder, Long
     Long countNullDeliveryCodesBySellerId(Long sellerId);
 
     @Query("SELECT COALESCE(SUM(p.productCount * p.productPrice), 0) " +
-            "FROM ProductOrder p " +
+            "FROM ProductOrder p JOIN p.orders o " +
             "WHERE REPLACE(SUBSTRING(p.orderDate, 1, 7), '-', '') = :month "+
+            "AND (p.productOrderStatus = 'CONFIRMED' OR o.isAuction = true) "+
             "AND p.sellerId = :sellerId")
     Long sumOrderTotalPriceByMonth(String month, Long sellerId);
 
     @Query("SELECT NEW com.jeontongju.order.repository.response.WeeklySalesDto(SUBSTRING(p.orderDate, 1, 10), SUM(p.productCount * p.productPrice)) " +
-            "FROM ProductOrder p " +
+            "FROM ProductOrder p JOIN p.orders o " +
             "WHERE REPLACE(SUBSTRING(p.orderDate, 1, 10), '-', '') BETWEEN :startDate AND :endDate " +
             "AND p.sellerId = :sellerId "+
+            "AND (p.productOrderStatus = 'CONFIRMED' OR o.isAuction = true) "+
             "GROUP BY SUBSTRING(p.orderDate, 1, 10)")
     List<WeeklySalesDto> sumOrderTotalPriceInDateRange(String startDate, String endDate, Long sellerId);
 
     @Query("SELECT COALESCE(SUM(p.productCount * p.productPrice), 0) " +
-            "FROM ProductOrder p " +
+            "FROM ProductOrder p JOIN p.orders o " +
             "WHERE REPLACE(SUBSTRING(p.orderDate, 1, 7), '-', '') = :month " +
-            "AND p.productOrderStatus = 'CONFIRMED'")
+            "AND (p.productOrderStatus = 'CONFIRMED' OR o.isAuction = true)")
     Long sumOrderTotalPriceByMonthExternal(String month);
 
     @Query("SELECT DISTINCT p.consumerId FROM ProductOrder p WHERE p.sellerId = :sellerId")
@@ -75,10 +77,10 @@ public interface ProductOrderRepository extends JpaRepository<ProductOrder, Long
             "            seller_name, " +
             "            SUM(product_Count * product_Price) AS totalSales " +
             "        FROM " +
-            "            product_order " +
+            "            product_order p JOIN orders o ON p.orders_id = o.orders_id " +
             "        WHERE " +
-            "            REPLACE(SUBSTRING(order_Date, 1, 7), '-', '') = :orderDate " +
-            "       AND product_order_status = 'CONFIRMED' "+
+            "            REPLACE(SUBSTRING(p.order_Date, 1, 7), '-', '') = :orderDate " +
+            "       AND (p.product_order_status = 'CONFIRMED' OR o.is_auction = true) "+
             "        GROUP BY " +
             "            seller_id, " +
             "            seller_name " +
@@ -90,10 +92,10 @@ public interface ProductOrderRepository extends JpaRepository<ProductOrder, Long
             nativeQuery = true)
     LinkedList<MonthSellerRankDto> getTop5MonthlySellerRanking(String orderDate);
 
-    @Query(value = "SELECT product_id AS productId, seller_id AS sellerId, product_name AS productName, seller_name AS sellerName, SUM(product_count) AS totalCount, RANK() OVER (ORDER BY SUM(product_count) DESC, seller_id) AS productRank " +
-            "FROM product_order " +
-            "WHERE REPLACE(SUBSTRING(order_Date, 1, 7), '-', '') = :orderDate AND product_order_status = 'CONFIRMED' " +
-            "GROUP BY product_id, seller_id, product_name, seller_name " +
+    @Query(value = "SELECT p.product_id AS productId, p.seller_id AS sellerId, p.product_name AS productName, p.seller_name AS sellerName, SUM(p.product_count) AS totalCount, RANK() OVER (ORDER BY SUM(p.product_count) DESC, p.seller_id) AS productRank " +
+            "FROM product_order p JOIN orders o ON p.orders_id = o.orders_id " +
+            "WHERE REPLACE(SUBSTRING(p.order_Date, 1, 7), '-', '') = :orderDate AND (p.product_order_status = 'CONFIRMED' OR o.is_auction = true) " +
+            "GROUP BY p.product_id, p.seller_id, p.product_name, p.seller_name " +
             "ORDER BY productRank LIMIT 5", nativeQuery = true)
     LinkedList<MonthProductRankDto> getTop5MonthlyProductRanking(String orderDate);
 
