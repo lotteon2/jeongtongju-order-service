@@ -78,7 +78,7 @@ public interface ProductOrderRepository extends JpaRepository<ProductOrder, Long
             "            product_order " +
             "        WHERE " +
             "            REPLACE(SUBSTRING(order_Date, 1, 7), '-', '') = :orderDate " +
-            "       AND product_order_status <> 'CANCEL' "+
+            "       AND product_order_status = 'CONFIRMED' "+
             "        GROUP BY " +
             "            seller_id, " +
             "            seller_name " +
@@ -92,7 +92,7 @@ public interface ProductOrderRepository extends JpaRepository<ProductOrder, Long
 
     @Query(value = "SELECT product_id AS productId, seller_id AS sellerId, product_name AS productName, seller_name AS sellerName, SUM(product_count) AS totalCount, RANK() OVER (ORDER BY SUM(product_count) DESC, seller_id) AS productRank " +
             "FROM product_order " +
-            "WHERE REPLACE(SUBSTRING(order_Date, 1, 7), '-', '') = :orderDate AND product_order_status <> 'CANCEL' " +
+            "WHERE REPLACE(SUBSTRING(order_Date, 1, 7), '-', '') = :orderDate AND product_order_status = 'CONFIRMED' " +
             "GROUP BY product_id, seller_id, product_name, seller_name " +
             "ORDER BY productRank LIMIT 5", nativeQuery = true)
     LinkedList<MonthProductRankDto> getTop5MonthlyProductRanking(String orderDate);
