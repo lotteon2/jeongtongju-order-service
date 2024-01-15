@@ -51,7 +51,8 @@ public interface ProductOrderRepository extends JpaRepository<ProductOrder, Long
 
     @Query("SELECT COALESCE(SUM(p.productCount * p.productPrice), 0) " +
             "FROM ProductOrder p " +
-            "WHERE REPLACE(SUBSTRING(p.orderDate, 1, 7), '-', '') = :month")
+            "WHERE REPLACE(SUBSTRING(p.orderDate, 1, 7), '-', '') = :month " +
+            "AND p.productOrderStatus = 'CONFIRMED'")
     Long sumOrderTotalPriceByMonthExternal(String month);
 
     @Query("SELECT DISTINCT p.consumerId FROM ProductOrder p WHERE p.sellerId = :sellerId")
