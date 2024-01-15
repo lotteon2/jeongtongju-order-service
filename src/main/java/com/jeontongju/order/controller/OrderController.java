@@ -49,13 +49,20 @@ public class OrderController {
     @GetMapping("/order/consumer")
     public ResponseEntity<ResponseFormat<ConsumerOrderListResponseDto>> getConsumerOrderList(
             @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable,
-            @RequestHeader Long memberId, @RequestHeader MemberRoleEnum memberRole, @RequestParam(required = false) Boolean isAuction){
+            @RequestHeader Long memberId, @RequestHeader MemberRoleEnum memberRole, @RequestParam(required = false) String isAuction){
         checkMemberRole(memberRole, MemberRoleEnum.ROLE_CONSUMER);
+        Boolean auctionFlag = null;
+        if(isAuction.equals("true")){
+            auctionFlag = true;
+        }else if(isAuction.equals("false")){
+            auctionFlag = false;
+        }
+
         return ResponseEntity.ok().body(ResponseFormat.<ConsumerOrderListResponseDto>builder()
                 .code(HttpStatus.OK.value())
                 .message(HttpStatus.OK.getReasonPhrase())
                 .detail("주문 내역 조회 성공")
-                .data(orderService.getConsumerOrderList(memberId, isAuction, pageable))
+                .data(orderService.getConsumerOrderList(memberId, auctionFlag, pageable))
         .build());
     }
 
