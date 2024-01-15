@@ -265,7 +265,7 @@ public class OrderService {
             for(ProductOrder productOrder : orders.getProductOrders()){
                 Delivery delivery = productOrder.getDelivery();
                 ProductOrderStatusEnum productOrderStatusEnum = getProductOrderStatusEnum(productOrder, delivery);
-                if(productOrderStatusEnum != ProductOrderStatusEnum.ORDER){isAbleToCancel = false;}
+                if(productOrderStatusEnum != ProductOrderStatusEnum.ORDER || orders.getIsAuction()){isAbleToCancel = false;}
                 productResponseDtoList.add(ProductResponseDto.productOrderToProductResponseDto(orders, productOrder, productOrderStatusEnum));
                 if(deliveryResponseDto == null){ deliveryResponseDto = DeliveryResponseDto.DeliveryToDeliveryResponseDto(delivery); }
             }
