@@ -50,7 +50,7 @@ public class ExcelWriterUtil {
         headerRow.createCell(3).setCellValue("정산월");
         headerRow.createCell(4).setCellValue("총금액");
         headerRow.createCell(5).setCellValue("수수료");
-        headerRow.createCell(6).setCellValue("판매액");
+        headerRow.createCell(6).setCellValue("정산액");
     }
 
     private void createDataRows(Sheet sheet, List<AllSellerSettlementDtoForAdmin> dataList) {
