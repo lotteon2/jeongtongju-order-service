@@ -91,7 +91,7 @@ public class OrderController {
 
     @GetMapping("/order/seller")
     public ResponseEntity<ResponseFormat<SellerOrderListResponseDto>> getSellerOrderList(
-            @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable,
+            @PageableDefault(sort = {"sellerId", "orderDate"}, direction = Sort.Direction.DESC) Pageable pageable,
             @RequestHeader MemberRoleEnum memberRole,
             @RequestHeader Long memberId, @RequestParam String startDate, @RequestParam String endDate,
             @RequestParam String productId, @RequestParam String productStatus, @RequestParam boolean isDeliveryCodeNull){
@@ -111,7 +111,7 @@ public class OrderController {
 
     @GetMapping("/order/seller/{sellerId}")
     public ResponseEntity<ResponseFormat<SellerOrderListResponseDto>> getSellerOrderListForAdmin(
-            @PathVariable Long sellerId, @PageableDefault(sort = "orderDate", direction = Sort.Direction.DESC)Pageable pageable,
+            @PathVariable Long sellerId,@PageableDefault(sort = {"sellerId", "orderDate"}, direction = Sort.Direction.DESC) Pageable pageable,
             @RequestHeader MemberRoleEnum memberRole){
         checkMemberRole(memberRole, MemberRoleEnum.ROLE_ADMIN);
         return ResponseEntity.ok().body(ResponseFormat.<SellerOrderListResponseDto>builder()
