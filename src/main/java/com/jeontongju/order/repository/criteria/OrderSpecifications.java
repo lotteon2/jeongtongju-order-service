@@ -34,7 +34,10 @@ public class OrderSpecifications {
     public static Specification<ProductOrder> buildSellerProductOrdersSpecification(Long sellerId, String startDate, String endDate , String productId, ProductOrderStatusEnum productStatus, boolean isDeliveryCodeNull) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
-            predicates.add(criteriaBuilder.equal(root.get("sellerId"), sellerId));
+
+            if(sellerId!=-1) {
+                predicates.add(criteriaBuilder.equal(root.get("sellerId"), sellerId));
+            }
 
             if (!startDate.equals("null") && !endDate.equals("null")) {
                 LocalDateTime from = parseOrderDate(startDate);

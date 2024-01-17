@@ -303,7 +303,7 @@ public class OrderService {
             Delivery delivery = productOrder.getDelivery();
 
             SellerOrderListDto sellerOrderDto = SellerOrderListDto.builder().deliveryId(delivery.getDeliveryId())
-                    .deliveryCode(delivery.getDeliveryCode()).build();
+                    .deliveryCode(delivery.getDeliveryCode()).sellerId(productOrder.getSellerId()).sellerName(productOrder.getSellerName()).build();
             setOrderResponseInfo(sellerOrderDto, orders, productOrder, delivery);
             sellerOrderListDtoList.add(sellerOrderDto);
         }

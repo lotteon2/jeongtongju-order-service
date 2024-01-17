@@ -13,4 +13,6 @@ import lombok.NoArgsConstructor;
 public class SellerOrderListDto extends OrderResponseCommonDto {
     private Long deliveryId;
     private String deliveryCode;
+    private Long sellerId;
+    private String sellerName;
 }
