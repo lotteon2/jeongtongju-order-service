@@ -33,7 +33,8 @@ public interface ProductOrderRepository extends JpaRepository<ProductOrder, Long
 
     @Query("SELECT COUNT(d) " +
             "FROM ProductOrder p JOIN p.delivery d " +
-            "WHERE p.sellerId = :sellerId AND d.deliveryCode IS NULL")
+            "WHERE p.sellerId = :sellerId AND d.deliveryCode IS NULL " +
+            "AND p.productOrderStatus <> 'CANCEL'")
     Long countNullDeliveryCodesBySellerId(Long sellerId);
 
     @Query("SELECT COALESCE(SUM(p.productCount * p.productPrice), 0) " +
